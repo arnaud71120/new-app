@@ -1,3 +1,17 @@
+# OpenAI et Gemini — version 2026-10-14.2
+
+Dans Cloudflare **Settings → Runtime variables and secrets → Production**, ajouter `GEMINI_API_KEY` de type Secret. Créer la clé dans https://aistudio.google.com/apikey ; ne jamais la publier ni la transmettre dans ChatGPT. Vérifier l’éligibilité du projet, les quotas et la facturation auprès de Google. Le niveau gratuit dépend du modèle et du projet ; il n’est pas garanti.
+
+Modèle Gemini initial : `gemini-2.5-flash`. Variable facultative `GEMINI_MODEL` pour choisir un autre modèle compatible avec le format generateContent et thinkingBudget. Modèle OpenAI initial : `gpt-4.1-mini`, variable facultative `OPENAI_MODEL` pour un modèle compatible Chat Completions.
+
+Après le déploiement, `/api/status` montre `openai` et `gemini` pour la présence des clés. Dans une fiche, choisir **Fournisseur IA**, puis générer. Le code APP_ACCESS_TOKEN est nécessaire pour les deux. Aucun basculement automatique payant : l’utilisateur choisit explicitement le fournisseur. La minute de protection est distincte pour chaque fournisseur ; une seule génération peut être active par instance. Les réponses en cache sont séparées par fournisseur.
+
+Les erreurs distinguent : `insufficient_quota` (OpenAI crédits/budget), `provider_limit` (limite/quota fournisseur), `app_rate_limit` (minute de protection Cyberveille), clé refusée, modèle inaccessible et réponse vide. Aucun message brut de fournisseur ni secret n’est retourné au navigateur. Une erreur de quota n’est pas corrigée en régénérant une clé.
+
+Validation : 15 tests automatiques avec fournisseurs simulés, dont Gemini, quota OpenAI, erreurs, syntaxe du navigateur et refus sans code. La génération avec les vraies clés de l’hébergement reste à tester par le propriétaire.
+
+---
+
 # Mise à jour du 14 octobre 2026
 
 ## Activer les connexions
