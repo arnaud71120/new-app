@@ -1,3 +1,33 @@
+# Veille mondiale — version 2026-10-14.3
+
+19 flux configurés : CERT-FR, ZATAZ, IT-Connect, BleepingComputer, The Hacker News, SecurityWeek, Krebs on Security, The Record, Schneier, SANS ISC, Talos, Securelist, ESET WeLiveSecurity, Sophos, Microsoft Security, Google Project Zero, CISA, NCSC UK, JPCERT/CC. Catalogue de médias, autorités et recherche complémentaire ; aucun classement universel des « meilleurs » n’est revendiqué. La disponibilité de chaque flux apparaît dans Sources. Jusqu’à 15 publications par flux, pas d’historique durable. Certains flux peuvent changer, limiter les Workers ou inclure des sujets non cyber.
+
+## Français et analyses
+
+Déverrouiller dans Sources, sélectionner Gemini ou OpenAI, puis **Traduire 12 informations en français** dans le fil. Relancer pour le lot suivant. Traduction à la demande avec les frais/quota du fournisseur ; les originaux sont conservés dans les publications de chaque fiche. Les traductions restent dans l’onglet, cache serveur d’une heure. Ce n’est pas une traduction gratuite ni automatique de tous les flux à chaque actualisation.
+
+L’analyse IA donne résumé accessible, fonctionnement technique, analogie/glossaire, impact, mesures défensives, provenance et inconnues. La différence entre connaissances techniques générales et faits de l’incident est explicitement demandée. Gemini est présélectionné lorsqu’il est configuré. Aucun choix de fournisseur caché.
+
+OpenAI : paramètre `max_completion_tokens` conforme à l’API Chat Completions, plafond 2400, Gemini 4096. Les sorties interrompues sont signalées. Erreurs de paramètres et de contexte distinguées des quotas et des clés. Le modèle par défaut reste gpt-4.1-mini ; un modèle personnalisé doit accepter les paramètres de cet endpoint. L’erreur exacte du propriétaire est nécessaire pour confirmer la cause d’un problème de tokens réel.
+
+## Provenance
+
+Bouton **Rechercher les références et la divulgation** : lit jusqu’à trois publications originales, extrait les liens ancrés, examine jusqu’à deux références amont sur un catalogue de domaines publics autorisés. Les redirections sont validées avant chaque requête, aucun téléchargement d’archive ou d’image ; documents limités à 1 Mo, délais bornés. Les sources amont institutionnelles/techniques sont des candidates, pas automatiquement les premières sources. La recherche suit les citations accessibles ; elle ne réalise pas une recherche exhaustive du web et ne visite pas de forum privé, de service Tor ou de dump.
+
+Les plateformes de divulgation citées (BreachForums, Telegram, site de revendication, etc.) portent la mention « emplacement non vérifié » et le lien de la publication qui les nomme. Ce signal est une détection de mention : il peut s’agir de contexte général ou d’une comparaison. L’IA doit évaluer le contexte. Le texte ne prouve ni que les données sont encore disponibles ni où elles sont réellement stockées. Les articles bloqués, payants ou non lisibles restent signalés.
+
+## X et LinkedIn
+
+Erreur X 402 : consulter console.x.com → Crédits, le solde du projet associé à l’application, ses limites budgétaires et les autorisations de recherche récente. L’achat de crédits appartient au propriétaire ; aucun achat ou rechargement automatique n’est effectué par Cyberveille.
+
+LinkedIn ne fournit pas un accès général à son fil via OpenID Connect. Demander Community Management n’assure pas l’éligibilité ni l’accès aux comptes tiers. Solution disponible dans Sources : lien public et extrait copiés par le propriétaire, stockés sur son appareil ; transmis à l’IA à sa demande. Il ne s’agit pas d’une lecture LinkedIn API. Les imports apparaissent sous « Sans date », pour ne pas inventer une date de publication.
+
+## Validation
+
+22 tests automatisés et build Worker valides : parseurs, anglais, catalogue, OpenAI/Gemini, protections, refus des redirections privées, imports LinkedIn, liens non documentaires. Fournisseurs simulés. Disponibilité réelle des 19 flux, API payantes et rendu mobile non vérifiés par ces tests. Aucun secret enregistré dans GitHub. Publication par Cloudflare Builds sur la branche main.
+
+---
+
 # OpenAI et Gemini — version 2026-10-14.2
 
 Dans Cloudflare **Settings → Runtime variables and secrets → Production**, ajouter `GEMINI_API_KEY` de type Secret. Créer la clé dans https://aistudio.google.com/apikey ; ne jamais la publier ni la transmettre dans ChatGPT. Vérifier l’éligibilité du projet, les quotas et la facturation auprès de Google. Le niveau gratuit dépend du modèle et du projet ; il n’est pas garanti.
