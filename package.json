@@ -1,0 +1,1 @@
+{"name":"cyberveille","private":true,"type":"module","scripts":{"start":"node scripts/dev.mjs","test":"node --test scripts/test.mjs","build":"bash scripts/build.sh && node scripts/validate-artifact.mjs"}}
