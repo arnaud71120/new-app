@@ -1,3 +1,15 @@
+# Français automatique — version 2026-10-14.5
+
+Les titres et résumés du fil passent automatiquement en français après déverrouillage des connexions. Gemini est sélectionné si disponible, sinon OpenAI. Le traitement couvre l’ensemble du fil, indépendamment de la recherche et des filtres, par lots de douze (un seul extrait à la fois pour les imports LinkedIn). Il reprend sur nouvelle collecte, nouveau résultat X et retour dans l’onglet visible. Les articles étrangers affichent un libellé français d’attente tant que le résultat n’est pas disponible. Les liens ouvrent les publications originales dans leur langue ; les pages externes et le texte intégral ne sont pas traduits par cette fonction.
+
+Le code APP_ACCESS_TOKEN doit être saisi une fois dans l’onglet. Les traductions utilisent le quota du fournisseur choisi. La limite d’une minute reste appliquée aux explications ; la file de traduction enchaîne les lots sans cette attente artificielle, avec une seule génération simultanée par instance Worker. Un quota fournisseur, une clé refusée ou une panne suspend la file, sans relances payantes en boucle. Le bouton « Relancer la traduction automatique » et le changement de fournisseur permettent la reprise après correction. Une analyse déjà en cours reporte la traduction de cinq secondes.
+
+Résultats conservés en mémoire de l’onglet et cache serveur d’une heure, sans stockage durable. Il peut donc y avoir des délais et de nouvelles traductions après rechargement/expiration. Aucun service de traduction ne peut garantir une génération instantanée lorsque les quotas ou la disponibilité du fournisseur bloquent les appels.
+
+Validation : 25 tests réussis et build Worker valide, dont file de 25 articles en trois lots automatiques, arrêt au quota et refus avant déverrouillage. Aucun test fournisseur réel ni navigateur mobile n’est couvert par ces tests.
+
+---
+
 # Profils prioritaires — version 2026-10-14.4
 
 14 profils fournis par le propriétaire sont référencés dans Sources, avec liens sans paramètres de suivi. Neuf comptes X : justabreach, mrtuxracer, ced_haurus, gonzague, dfintelligence, dailydarkweb, bluetouff, _saxx_, comcyberfr. Neuf liens LinkedIn sont conservés pour consultation/import manuel ; les noms et correspondances sont ceux fournis par le propriétaire, pas une validation indépendante d’identité.
