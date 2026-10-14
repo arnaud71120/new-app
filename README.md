@@ -1,3 +1,13 @@
+# Profils prioritaires — version 2026-10-14.4
+
+14 profils fournis par le propriétaire sont référencés dans Sources, avec liens sans paramètres de suivi. Neuf comptes X : justabreach, mrtuxracer, ced_haurus, gonzague, dfintelligence, dailydarkweb, bluetouff, _saxx_, comcyberfr. Neuf liens LinkedIn sont conservés pour consultation/import manuel ; les noms et correspondances sont ceux fournis par le propriétaire, pas une validation indépendante d’identité.
+
+La requête X par défaut cible ces neuf auteurs avec `from:` et exclut les republications, sans restriction de langue ni de sujet. Une éventuelle variable runtime X_SEARCH_QUERY remplace cette requête : la supprimer pour utiliser la sélection. Au maximum 10 publications récentes par collecte (pas 10 par auteur), cache cinq minutes ; couverture non exhaustive et appels facturables par X. Le label « Compte suivi » indique l’appartenance à la sélection, jamais une vérification des faits ni une augmentation automatique de gravité.
+
+Pas de collecte LinkedIn API ni de lecture des profils à chaque actualisation. Utiliser les liens du répertoire, copier le lien de publication et le texte voulu dans le formulaire d’import. Aucune donnée de compte privée ni mot de passe nécessaire.
+
+---
+
 # Veille mondiale — version 2026-10-14.3
 
 19 flux configurés : CERT-FR, ZATAZ, IT-Connect, BleepingComputer, The Hacker News, SecurityWeek, Krebs on Security, The Record, Schneier, SANS ISC, Talos, Securelist, ESET WeLiveSecurity, Sophos, Microsoft Security, Google Project Zero, CISA, NCSC UK, JPCERT/CC. Catalogue de médias, autorités et recherche complémentaire ; aucun classement universel des « meilleurs » n’est revendiqué. La disponibilité de chaque flux apparaît dans Sources. Jusqu’à 15 publications par flux, pas d’historique durable. Certains flux peuvent changer, limiter les Workers ou inclure des sujets non cyber.
