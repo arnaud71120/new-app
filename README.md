@@ -1,3 +1,22 @@
+# Mise à jour du 14 octobre 2026
+
+## Activer les connexions
+
+Dans Cloudflare → cyberveille-fr → Settings → Variables and Secrets, conserver les credentials renouvelés et ajouter **APP_ACCESS_TOKEN**, de type Secret : une valeur aléatoire unique d’au moins 24 caractères, générée par un gestionnaire de mots de passe. Ne pas communiquer cette valeur dans ChatGPT.
+
+Dans l’application → Sources, saisir ce code dans « Code d’accès personnel », puis « Déverrouiller les connexions ». Le code reste en mémoire dans cet onglet et disparaît au rechargement. Ce code n’est ni une clé API ni un mot de passe X/LinkedIn.
+
+- **OPENAI_API_KEY** (Secret) : explications à la demande après déverrouillage. Une analyse par minute et par instance Worker, une seule génération simultanée, réponses limitées à 650 tokens, cache d’une heure. Ces limites en mémoire ne sont pas un plafond de dépenses global ; régler les budgets et alertes chez le fournisseur.
+- **X_BEARER_TOKEN** (Secret) : bouton « Rechercher sur X » dans Sources. Recherche récente francophone, 10 résultats maximum, lancée explicitement car elle peut coûter des crédits. Cache de cinq minutes par instance, aucun appel X lors du rafraîchissement RSS. Les résultats restent dans l’onglet et peuvent être expliqués avec l’IA. Une erreur 401/402/403/429 est expliquée sans exposer le jeton.
+- **X_SEARCH_QUERY** (Variable, facultative) : requête de recherche X personnalisée ; peut cibler des comptes via `from:nom`. Par défaut, recherche cybersécurité, rançongiciels, fuites, vulnérabilités et CVE en français. Ce premier filtre n’est pas encore une liste évaluée des meilleurs comptes.
+- **LINKEDIN_CLIENT_ID** (Variable) et **LINKEDIN_CLIENT_SECRET** (Secret) : l’écran indique leur présence. Aucune collecte LinkedIn tant que les produits API, autorisations et parcours OAuth appropriés ne sont établis. La présence d’un secret n’est pas un test de connexion.
+
+La page et les flux publics restent publics. Le code d’accès protège les opérations payantes ; il ne constitue pas un système de comptes ou une protection contre les personnes à qui le code est communiqué. Utiliser Cloudflare Access si une confidentialité complète est souhaitée.
+
+Validation de la mise à jour : 11 tests avec fournisseurs simulés, build Worker valide. Les credentials Cloudflare ne sont pas accessibles depuis cet environnement ; les lectures X et générations OpenAI réelles devront être testées dans l’application. Le déploiement est déclenché par la synchronisation GitHub si Cloudflare Builds est configuré.
+
+---
+
 # Cyberveille
 
 Première version d’une application web française de veille cybersécurité, responsive et sans dépendances pour le développement local. Le code est conservé dans le dépôt privé `arnaud71120/new-app`. L’application n’a pas encore été publiée.
@@ -47,7 +66,7 @@ Ne pas activer une API IA payante sur un déploiement public sans authentificati
 
 ## Prochaines intégrations nécessaires
 
-- Connexion X par OAuth et API autorisée ; pas de saisie de mot de passe. Vérifier les quotas et l’offre API.
+- Connexion X OAuth pour des usages au nom du compte ; la recherche publique par Bearer Token est désormais disponible. Vérifier les quotas et l’offre API.
 - LinkedIn : vérifier l’éligibilité API ; une connexion au compte ne donne pas automatiquement accès au fil personnel. Pas de scraping de comptes privés.
 - Sélection de comptes francophones et classement des sources à définir avec l’utilisateur.
 - Stockage durable, tâches de collecte planifiées, rapprochement sémantique des incidents, remontée des références dans les articles complets et classement IA central.
