@@ -1,3 +1,15 @@
+# Ressources techniques et analyses approfondies — 2026-10-14.6
+
+Six flux techniques supplémentaires configurés : PortSwigger Research, The DFIR Report, Black Hills Information Security, SpecterOps, Bellingcat (guides pratiques) et OWASP. Total : 25 flux. Leur disponibilité reste affichée source par source ; un flux bloqué ou modifié ne peut pas être considéré comme une collecte réussie.
+
+Filtres ajoutés : Ressources techniques, Pentest, Défense, OSINT et Investigation. Une catégorie technique ne remplace pas la catégorie incident : un rapport sur un rançongiciel peut aussi relever de l’investigation. Les six flux sont identifiés techniques ; les autres flux peuvent fournir des tutoriels détectés dans le titre. Les thèmes sont repérés par vocabulaire, sans garantie de classification sémantique parfaite.
+
+Toutes les fiches proposent une analyse technique approfondie avec vulgarisation : résumé, mécanismes, prérequis, méthode, exemples de laboratoire justifiés, interprétation, détection, remédiation, faux positifs, analogies et glossaire. Les sections s’adaptent au sujet et distinguent les éléments documentés, connaissances générales et informations absentes. Les détails de l’IA ne constituent pas une validation indépendante du tutoriel. La lecture de provenance enrichit les extraits accessibles mais ne contourne pas les pages bloquées et ne fournit pas nécessairement l’article intégral.
+
+Budget de sortie des analyses : 6000 tokens, instruction cible de 1800 mots maximum ; traductions limitées à 4096 tokens. Le fournisseur peut toujours limiter ou tronquer une réponse, ce qui est signalé. Les réponses détaillées peuvent coûter plus de crédits et prendre plus de temps. L’utilisateur déclenche explicitement chaque analyse ; la traduction des titres/résumés reste automatique après déverrouillage.
+
+---
+
 # Français automatique — version 2026-10-14.5
 
 Les titres et résumés du fil passent automatiquement en français après déverrouillage des connexions. Gemini est sélectionné si disponible, sinon OpenAI. Le traitement couvre l’ensemble du fil, indépendamment de la recherche et des filtres, par lots de douze (un seul extrait à la fois pour les imports LinkedIn). Il reprend sur nouvelle collecte, nouveau résultat X et retour dans l’onglet visible. Les articles étrangers affichent un libellé français d’attente tant que le résultat n’est pas disponible. Les liens ouvrent les publications originales dans leur langue ; les pages externes et le texte intégral ne sont pas traduits par cette fonction.
