@@ -98,3 +98,28 @@ Les requêtes de lancement sont réduites au schéma minimal des profils (`url` 
 Les motifs Bright Data de refus sont affichés dans le diagnostic après masquage des secrets. Un HTTP 400 libère la réservation locale correspondante ; les réservations des refus de l’ancienne version sont libérées une fois lors de la migration du format. Les démarrages incertains restent bloqués, sans relance automatique. Le bouton manuel permet de réessayer une requête refusée après une minute ; il ne relance pas une collecte en cours ou déjà réussie avant son intervalle.
 
 35 tests simulés et build passent. L’erreur exacte et le succès réel du fournisseur restent à vérifier sur l’hébergement ; aucun appel ne peut être testé avec les secrets de production depuis le dépôt.
+
+### Mise à jour 2026-10-15.8 : cours pratiques et configuration
+
+Les 18 leçons incluent maintenant un laboratoire autonome en français : préparation,
+fonctionnement, manipulations ou commandes, observations attendues, interprétation,
+dépannage et exercice corrigé. Les outils s’exécutent sur le poste de l’apprenant ;
+la page ne les exécute pas. Les versions et sorties peuvent varier selon la plateforme.
+Aucune clé IA n’est nécessaire pour ces leçons intégrées.
+
+Dans Cloudflare, sélectionner le Worker → Settings → Runtime variables and secrets
+→ Production, et non les variables de Builds. `GEMINI_API_KEY` est un Secret ;
+`GEMINI_FREE_TIER_CONFIRMED=true` est une variable Text attestant que le projet
+Gemini est sans facturation. `BRIGHTDATA_TOKEN` est un Secret ;
+`BRIGHTDATA_FREE_ONLY_CONFIRMED=true` est une variable Text attestant la vérification
+du compte Bright Data sans fonds ni recharge automatique. Enregistrer et déployer,
+puis recharger Cyberveille et déverrouiller les connexions avec APP_ACCESS_TOKEN.
+Ces confirmations ne vérifient pas automatiquement les comptes des fournisseurs.
+
+Les diagnostics sociaux distinguent lignes reçues, publications reconnues et erreurs
+fournisseur, en masquant les jetons connus. Les réponses LinkedIn imbriquées dans
+`posts` sont acceptées tout en conservant la priorité de l’auteur explicite du post.
+Une activation manuelle peut relire une fois un snapshot déjà enregistré après une
+mise à jour de l’importeur, sans nouveau déclenchement ni réservation d’extraction.
+Les anciennes collectes dont l’identifiant n’a pas été conservé nécessitent une
+vérification du résultat directement dans la console Bright Data.
