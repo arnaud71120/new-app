@@ -337,3 +337,17 @@ Une relance de réparation LinkedIn unique est autorisée au prochain passage de
 collecte pour un ancien résultat vide, après une heure, sous les confirmations et
 le plafond mensuel existants. Elle ne garantit pas de publication reçue.
 Validation : 81 tests et construction de l’artefact Worker.
+
+### 2026-10-15.18 : copie Safari et quota Gemini
+
+La copie du cours ouvre toujours un aperçu complet sélectionnable, tente la copie
+synchrone du navigateur puis le presse-papiers moderne, et affiche son résultat
+séparément des erreurs du tuteur API. L’aperçu reste ouvert après une mise à jour
+de la page. Aucun appel API n’est requis pour copier vers Gemini Pro ; le collage
+reste une action manuelle dans Gemini. Les erreurs de quota orientent le tuteur
+vers ce parcours et le diagnostic vers les quotas Google AI Studio. Le fil propose
+une traduction externe de la page source ; ce lien ne remplace pas une traduction
+intégrée et les restrictions du site source peuvent empêcher sa lecture.
+Les textes déjà français peuvent être reconnus malgré une langue de source anglaise.
+Validation : 83 tests, dont copie Safari avec le générateur de contexte réellement
+embarqué dans le HTML, et construction valide.
