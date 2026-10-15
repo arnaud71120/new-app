@@ -351,3 +351,18 @@ intégrée et les restrictions du site source peuvent empêcher sa lecture.
 Les textes déjà français peuvent être reconnus malgré une langue de source anglaise.
 Validation : 83 tests, dont copie Safari avec le générateur de contexte réellement
 embarqué dans le HTML, et construction valide.
+
+### 2026-10-15.19 : durcissement après audit
+
+Fonctions et stockage conservés : sessions temporaires révocables par onglet,
+limitation des essais, coordination persistante des appels Gemini et des lectures
+de flux, pause partagée en cas de quota, caches dépendants du contenu, annulation
+et purge privée au verrouillage, téléchargements bornés et CSP par nonce.
+Le cache de flux reste accessible pendant une extraction sociale lente.
+Aucune migration ni clé supplémentaire requise. Le code maître Bearer reste
+compatible côté API ; le navigateur échange maintenant ce code contre une session.
+`GEMINI_DAILY_REQUEST_LIMIT` (facultatif, défaut 1000/jour UTC) et
+`EXTERNAL_CALLS_PAUSED=true` (arrêt Gemini/Bright Data) sont disponibles.
+Détails et limites restantes : `audit/CORRECTIONS-SECURITE-2026-10-15.md`.
+Validation : 98 tests et construction de l’artefact Worker. Vérification distante
+et essai Safari iPhone réel restent distincts des tests simulés.
