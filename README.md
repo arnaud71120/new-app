@@ -276,3 +276,39 @@ TryHackMe Complete Beginner redirige à la date de vérification. Les plateforme
 restent externes, leurs conditions d’accès sont affichées, aucun achat ni
 abonnement n’est lancé et aucun cours payant n’est reproduit. Les dates sont
 indicatives ; les critères de validation guident la progression réelle.
+
+### 2026-10-15.15 : Microsoft, SOC, audit et périmètre cyber élargi
+
+La veille utilise plusieurs étiquettes par publication : Microsoft, SOC,
+audit/conformité, identité/accès, correctifs, cloud, DevSecOps, sécurité applicative,
+mobile, IoT/OT, cryptographie, données et IA, en plus des thèmes existants.
+Les filtres prennent en compte toutes les publications regroupées. Un rapport
+SOC 2 n’est pas confondu avec les opérations d’un analyste SOC.
+
+Quatre flux Microsoft Tech Community sont ajoutés : Sentinel, Intune Customer
+Success, Defender for Endpoint et Windows IT Pro. Le catalogue automatique passe
+à 62 sources ; les lots de 20 et le cache partagé restent inchangés. Les adresses
+ont été consultées comme flux XML, mais leur lecture depuis Cloudflare doit être
+confirmée par le diagnostic réel. Les contenus accessibles sont traduits selon
+le mécanisme Gemini existant, sans activation de dépense.
+
+Tutoriels : 10 parcours, 30 leçons originales en français. Trois nouvelles
+spécialisations de trois niveaux :
+- Microsoft : état Windows/Defender/pare-feu, Intune/GPO/conformité, correctifs.
+- SOC : événements/triage, KQL sur datatable fictive, investigation/escalade.
+- Audit : périmètre/référentiels, tests de contrôle/preuves, constats/risques/suivi.
+Les manipulations sont en lecture seule ou sur des scénarios fictifs ; aucun
+produit cloud ni tenant payant n’est créé ou configuré par l’application.
+
+Un annuaire interrogeable dans Tutoriels présente 20 référentiels (ISO 19011,
+27007, TS 27008, 27001, 27002, 27005, NIST SP 800-53, CIS Controls/Benchmarks,
+PASSI, SecNumCloud, NIS 2, PCI DSS, SOC 2, PTES, ASVS, WSTG, MASTG, RGPD,
+OSSTMM) et les 23 certifications demandées. Les résumés distinguent normes,
+guides, qualification, réglementation et attestation, sans reproduire de normes
+payantes ni prétendre établir une conformité. L’édition et le périmètre doivent
+être vérifiés dans les publications officielles. La préparation indiquée n’est
+pas une formation exhaustive ni une garantie de réussite à un examen.
+
+Statuts Microsoft vérifiés sur Microsoft Learn le 15/10/2026 : MS-500 retiré le
+30/06/2023 ; AZ-500 retiré le 31/08/2026. Ils sont conservés comme historiques.
+Les autres offres et conditions d’inscription sont à revérifier chez leur fournisseur.
