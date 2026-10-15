@@ -145,3 +145,21 @@ Le navigateur peut restaurer une session d’onglet ; utiliser « Verrouiller »
 supprimer le code. Aucun stockage dans localStorage. La restauration revalide le
 code puis charge les publications sociales enregistrées. Une collecte Bright Data
 vide ou non reconnue ne devient pas artificiellement une publication.
+
+### 2026-10-15.10 : tableau des feux de diagnostic
+
+Dans Sources, un tableau privé affiche les états vert (lecture ou réponse vérifiée),
+orange (configuration seule, collecte en cours, ancien résultat ou aucun post),
+rouge (configuration manquante ou erreur). Il couvre Gemini, Bright Data, stockage,
+X, LinkedIn, chaque profil suivi sur chaque plateforme et chaque flux RSS.
+Les erreurs RSS conservent leur code HTTP. Les conseils expliquent les erreurs
+400/401/402/403/404/429/5xx, délais, réponses vides et paramètres manquants.
+
+`GET /api/health` exige le code personnel et ne déclenche ni extraction sociale
+ni appel Gemini. Il peut lire les flux RSS avec le cache habituel de 60 secondes.
+`POST /api/health/gemini` exige aussi la même origine et un projet gratuit confirmé ;
+le clic effectue un test court, limité à un par minute et sans concurrence IA.
+Le résultat Gemini est un dernier état observé pendant au plus une heure dans cette
+instance du Worker, pas une garantie permanente ni un test de tous les usages.
+Les paramètres secrets se modifient dans Cloudflare ; aucun éditeur de secrets ou
+API de modification de la configuration n’est exposé dans l’application.
