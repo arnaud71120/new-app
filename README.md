@@ -123,3 +123,25 @@ Une activation manuelle peut relire une fois un snapshot déjà enregistré apr�
 mise à jour de l’importeur, sans nouveau déclenchement ni réservation d’extraction.
 Les anciennes collectes dont l’identifiant n’a pas été conservé nécessitent une
 vérification du résultat directement dans la console Bright Data.
+
+### 2026-10-15.9 : Gemini seul, tutorat et session explicite
+
+Le fournisseur IA de l’application est uniquement Gemini ; les clés d’un autre
+fournisseur sont ignorées. Google AI Pro dans l’application Gemini et les appels
+programmatiques Gemini API ont des modalités et quotas distincts : aucun abonnement
+n’autorise automatiquement des appels API payants. Le mode sans dépense demeure.
+
+Chaque exercice inclut une explication technique et un dialogue contextuel avec
+Gemini via `/api/course-chat` (code privé, origine même site, tailles bornées,
+historique limité, garde de concurrence et temporisation). Rien n’est exécuté.
+Le dialogue reste dans la mémoire de la page. « Copier pour Gemini » prépare le
+cours et la question dans le presse-papiers ; l’utilisateur peut les coller dans
+l’application Gemini avec son compte Pro. Aucun transfert automatique à l’app
+Gemini et aucune utilisation de cookies ou de la session Google.
+
+Le code personnel est vérifié via `/api/session` avant d’annoncer une connexion.
+Après validation, sessionStorage le conserve pour les rechargements dans cet onglet.
+Le navigateur peut restaurer une session d’onglet ; utiliser « Verrouiller » pour
+supprimer le code. Aucun stockage dans localStorage. La restauration revalide le
+code puis charge les publications sociales enregistrées. Une collecte Bright Data
+vide ou non reconnue ne devient pas artificiellement une publication.
