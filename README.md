@@ -312,3 +312,15 @@ pas une formation exhaustive ni une garantie de réussite à un examen.
 Statuts Microsoft vérifiés sur Microsoft Learn le 15/10/2026 : MS-500 retiré le
 30/06/2023 ; AZ-500 retiré le 31/08/2026. Ils sont conservés comme historiques.
 Les autres offres et conditions d’inscription sont à revérifier chez leur fournisseur.
+
+### 2026-10-15.16 : contexte complet pour Gemini Pro
+
+Le bouton « Copier le cours + ma question · Gemini Pro » prépare un texte lisible
+avec parcours, niveau, objectif, prérequis, leçon précédente, notions, mécanismes,
+laboratoire complet (commandes, résultats, interprétation, dépannage, exercice et
+corrigé), quiz, sources, enrichissement affiché et huit messages récents de la leçon.
+La question de l’utilisateur termine le texte. Un aperçu permet de vérifier ce qui
+sera collé ; le clic ne transmet rien automatiquement à Gemini. Le tuteur est invité
+à adapter ses explications et à ne pas révéler le corrigé complet d’emblée.
+Si le navigateur refuse le presse-papiers, l’aperçu sélectionnable contient le texte
+complet sans remplacer ni allonger le champ de question de l’utilisateur.
