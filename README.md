@@ -1,3 +1,29 @@
+# Menu Tutoriels — version 2026-10-15.6
+
+Un menu dédié propose six parcours progressifs : OSINT, forensic, pentest, défense, sécurité réseau et Google dorks. Chaque parcours comprend trois leçons (débutant, intermédiaire, avancé), soit 18 leçons originales rédigées en français avec objectifs, prérequis, notions, exercice en quatre étapes, résultat attendu, erreur fréquente, question de compréhension, corrigé et documentation officielle. Les durées sont indicatives ; la progression est déclarative et stockée dans localStorage sur l’appareil. Pas de compte ou de certificat de formation.
+
+Les leçons fondamentales fonctionnent sans IA ni paiement. Les pratiques utilisent un laboratoire autorisé, des données fictives ou des documents publics institutionnels. Le catalogue ne cherche pas de secrets, ne vise pas de personnes privées et n’exécute aucun outil sur des cibles depuis le navigateur.
+
+Chaque parcours affiche les dernières publications correspondantes des flux disponibles, triées par date. Les titres internationaux attendent leur traduction française plutôt que de s’afficher en anglais ; la traduction automatique existante nécessite le déverrouillage et Gemini gratuit confirmé. Les sources externes restent dans leur langue originale. Les documents récents sont des compléments, pas automatiquement des cours relus ou des méthodes éprouvées.
+
+Un catalogue d’outils (Volatility 3, Autopsy, Zeek, Suricata, Sigma, Wazuh, ZAP, Amass, SpiderFoot) vérifie la dernière release publiée sur les dépôts officiels GitHub, avec date de publication, date de vérification et cache d’une heure. Une requête bloquée ou l’absence de release produit « version non vérifiée » ; aucune version n’est inventée. Ce catalogue n’est pas un inventaire exhaustif des outils nouvellement créés, et les versions affichées ne garantissent pas leur adéquation au poste de l’utilisateur.
+
+Le bouton **Approfondir avec les sources récentes · Gemini** ajoute un cours détaillé en français à partir de la leçon, des documentations publiques accessibles, des métadonnées de versions et de trois articles récents correspondants. Il nécessite APP_ACCESS_TOKEN et GEMINI_FREE_TIER_CONFIRMED=true. Aucun basculement vers un fournisseur payant. La disponibilité du fournisseur et ses quotas limitent l’enrichissement ; le cours de base reste accessible en cas d’erreur. Les sorties du modèle ne constituent pas une validation technique des sources et les informations non documentées doivent rester signalées.
+
+Les cours ouverts et enrichissements en mémoire de l’onglet sont préservés quand les traductions ou le suivi social actualisent la page. La progression « acquis » est conservée sur l’appareil ; les cours enrichis ne sont pas conservés après rechargement.
+
+Validation : 41 tests simulés passent et l’artefact ESM est valide. Les tests couvrent la structure et progression des parcours, la présence du menu, les protections de l’enrichissement et l’indication d’outils dont la version est indisponible. Les lectures réelles GitHub, les générations Gemini et le rendu mobile restent à vérifier après déploiement.
+
+Documentation de référence :
+- https://bellingcat.gitbook.io/toolkit
+- https://volatility3.readthedocs.io/en/stable/
+- https://portswigger.net/web-security/learning-paths
+- https://sigmahq.io/docs/
+- https://docs.zeek.org/en/current/
+- https://support.google.com/websearch/answer/2466433
+
+---
+
 # Suivi des collectes — version 2026-10-15.5
 
 Le statut starting indique seulement qu’un identifiant de snapshot a été reçu. Il ne garantit ni résultat ni absence d’erreur finale. Les états sont maintenant affichés en français et accompagnés du nombre de lignes reçues et de publications importées. Le message de suivi est aussi présent sur le fil, avec des filtres X / Twitter et LinkedIn.
