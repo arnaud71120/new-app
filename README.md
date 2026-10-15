@@ -189,3 +189,18 @@ relancer une collecte antérieure vide, au plus une fois par heure, sans relance
 Le compte Bright Data sans fonds confirmé et le plafond mensuel restent obligatoires.
 La route ciblée ne crée jamais une seconde collecte si un job est en cours.
 La relance réserve au maximum 9 résultats et ne garantit pas leur disponibilité.
+
+### 2026-10-15.12 : conserver la configuration lors des builds
+
+Les deux confirmations que le propriétaire a déjà renseignées sont désormais
+déclarées comme chaînes dans `wrangler.jsonc` sous `vars` :
+`GEMINI_FREE_TIER_CONFIRMED: "true"` et
+`BRIGHTDATA_FREE_ONLY_CONFIRMED: "true"`. Elles ne disparaissent donc plus au
+déploiement depuis Git. `keep_vars: true` conserve aussi les autres variables
+Text ajoutées dans le tableau de bord et absentes de la configuration du dépôt.
+Une valeur explicitement déclarée dans `vars` reste pilotée par ce fichier ;
+pour révoquer une de ces deux confirmations, modifier aussi le dépôt.
+Les clés et jetons restent des Secrets Cloudflare et ne sont pas dans Git.
+Cette configuration reprend les confirmations déjà saisies par le propriétaire,
+sans vérifier automatiquement la facturation des fournisseurs ni activer une
+offre payante.

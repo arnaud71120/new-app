@@ -23,5 +23,10 @@
     "crons": [
       "*/15 * * * *"
     ]
+  },
+  "keep_vars": true,
+  "vars": {
+    "GEMINI_FREE_TIER_CONFIRMED": "true",
+    "BRIGHTDATA_FREE_ONLY_CONFIRMED": "true"
   }
 }
