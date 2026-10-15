@@ -163,3 +163,29 @@ Le résultat Gemini est un dernier état observé pendant au plus une heure dans
 instance du Worker, pas une garantie permanente ni un test de tous les usages.
 Les paramètres secrets se modifient dans Cloudflare ; aucun éditeur de secrets ou
 API de modification de la configuration n’est exposé dans l’application.
+
+### 2026-10-15.11 : lisibilité et causes communes
+
+Les cartes de diagnostic utilisent une classe dédiée en affichage vertical :
+l’ancien flex horizontal des cartes du catalogue ne doit pas s’y appliquer.
+Les longs noms de paramètres et liens reviennent à la ligne. La vérification
+visuelle Chromium n’a pas pu être exécutée dans cet environnement (socket Crashpad
+refusé) ; la génération HTML/JS et les règles dédiées sont vérifiées par les tests.
+
+Les confirmations manquantes sont regroupées avec le nom et la valeur à saisir
+séparément dans les variables runtime Production. Les profils dépendant d’une
+plateforme bloquée passent en orange et sont regroupés dans une section dépliable.
+Les anciennes entrées désactivées des API X/LinkedIn ne sont plus dupliquées dans
+les diagnostics. Le résumé du fil distingue publications conservées et nouvelles
+collectes bloquées. Les conseils RSS n’évoquent plus de modèle ou de clé API.
+
+Project Zero utilise https://projectzero.google/feed.xml ; SpecterOps utilise
+https://specterops.io/feed/. L’ancienne URL OWASP /feed.xml répondant 404, OWASP
+reste une référence manuelle et pédagogique, sans annoncer un flux actif.
+Les 403 côté fournisseur ne sont pas contournés et restent signalés.
+
+Après correction de la configuration, « Réessayer LinkedIn uniquement » peut
+relancer une collecte antérieure vide, au plus une fois par heure, sans relancer X.
+Le compte Bright Data sans fonds confirmé et le plafond mensuel restent obligatoires.
+La route ciblée ne crée jamais une seconde collecte si un job est en cours.
+La relance réserve au maximum 9 résultats et ne garantit pas leur disponibilité.
