@@ -54,3 +54,11 @@ Références :
 - https://brightdata.com/products/web-scraper
 - https://docs.brightdata.com/api-reference/scrapers/social-media-apis/linkedin-posts-discover-by-profile-url
 - https://developers.cloudflare.com/durable-objects/platform/pricing/
+
+## Correctif 2026-10-15.4 : requêtes refusées HTTP 400
+
+Les requêtes de lancement sont réduites au schéma minimal des profils (`url` uniquement), avec maintien des plafonds `limit_per_input` côté requête. Les champs optionnels de date et les paramètres propres aux collecteurs sont retirés pour éviter les incompatibilités de validation. La collecte peut donc relire des publications anciennes, toujours dédoublonnées au stockage mais susceptibles de consommer l’enveloppe gratuite. Aucun élargissement du plafond.
+
+Les motifs Bright Data de refus sont affichés dans le diagnostic après masquage des secrets. Un HTTP 400 libère la réservation locale correspondante ; les réservations des refus de l’ancienne version sont libérées une fois lors de la migration du format. Les démarrages incertains restent bloqués, sans relance automatique. Le bouton manuel permet de réessayer une requête refusée après une minute ; il ne relance pas une collecte en cours ou déjà réussie avant son intervalle.
+
+35 tests simulés et build passent. L’erreur exacte et le succès réel du fournisseur restent à vérifier sur l’hébergement ; aucun appel ne peut être testé avec les secrets de production depuis le dépôt.
