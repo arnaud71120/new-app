@@ -1,3 +1,13 @@
+# Suivi des collectes — version 2026-10-15.5
+
+Le statut starting indique seulement qu’un identifiant de snapshot a été reçu. Il ne garantit ni résultat ni absence d’erreur finale. Les états sont maintenant affichés en français et accompagnés du nombre de lignes reçues et de publications importées. Le message de suivi est aussi présent sur le fil, avec des filtres X / Twitter et LinkedIn.
+
+Les lectures authentifiées de `/api/social` vérifient désormais les collectes déjà en attente, sans démarrer de nouvelles extractions. Les vérifications sont espacées d’au moins 15 secondes côté stockage et renouvelées toutes les 20 secondes dans l’onglet, en complément des alarmes serveur. Après 10 minutes, un message demande de vérifier le fournisseur. Un snapshot prêt dont le fichier est encore en construction reste en attente au lieu d’être perdu. Les liens LinkedIn régionaux et le champ `use_url` des résultats fournisseur sont reconnus pour l’attribution aux comptes suivis.
+
+38 tests et build valides, dont import sur interrogation, absence de nouveau lancement, fichier en préparation et reconnaissance des domaines LinkedIn régionaux. Vérification du fournisseur réel toujours nécessaire ; aucune publication fictive ajoutée pour masquer une collecte vide.
+
+---
+
 # Cyberveille — mode sans dépense (2026-10-15.3)
 
 Application française de veille cyber pour Cloudflare Workers, sources dans le dépôt privé arnaud71120/new-app. JavaScript ESM sans dépendance. `npm start` pour le développement Node ; `node scripts/test.mjs` pour les tests ; `npm run build` pour l’artefact Worker.
