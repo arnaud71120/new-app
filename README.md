@@ -324,3 +324,16 @@ sera collé ; le clic ne transmet rien automatiquement à Gemini. Le tuteur est 
 à adapter ses explications et à ne pas révéler le corrigé complet d’emblée.
 Si le navigateur refuse le presse-papiers, l’aperçu sélectionnable contient le texte
 complet sans remplacer ni allonger le champ de question de l’utilisateur.
+
+### 2026-10-15.17 : accès rapides et dépannage des flux
+
+Sources commence par les connexions privées et les commandes de collecte X/LinkedIn.
+Le diagnostic peut masquer les sources vertes. Les erreurs 429 décrivent désormais
+la limitation du site concerné et imposent une pause avant une nouvelle lecture.
+Les téléchargements sont limités à six connexions simultanées ; Project Zero et
+Elastic disposent d’une limite de document de 4 Mo et les erreurs de taille sont
+identifiées séparément. Les flux Blogger directs et Atom préfixés sont mieux lus.
+Une relance de réparation LinkedIn unique est autorisée au prochain passage de
+collecte pour un ancien résultat vide, après une heure, sous les confirmations et
+le plafond mensuel existants. Elle ne garantit pas de publication reçue.
+Validation : 81 tests et construction de l’artefact Worker.
