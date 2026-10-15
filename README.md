@@ -204,3 +204,36 @@ Les clés et jetons restent des Secrets Cloudflare et ne sont pas dans Git.
 Cette configuration reprend les confirmations déjà saisies par le propriétaire,
 sans vérifier automatiquement la facturation des fournisseurs ni activer une
 offre payante.
+
+### 2026-10-15.13 : sources internationales et traduction
+
+18 flux officiels supplémentaires portent le catalogue automatique à 42 :
+Check Point Research, SentinelLabs, Unit 42, Google Threat Intelligence/Mandiant,
+SecurityLab, Xakep, Doctor Web (alertes virales), AhnLab ASEC, Huntress,
+Help Net Security, CERT-EU, CERT-SE, CERT Polska, NVISO Labs, Rapid7, Tenable,
+Google Security Blog et Elastic Security Labs. La sélection distingue médias,
+CERT et recherche d’éditeurs ; pays, langue et rôle figurent dans le catalogue.
+Leurs réponses XML/RSS ont été recherchées via les adresses officielles ; leur
+lecture effective depuis Cloudflare demeure indiquée par le diagnostic réel,
+qui ne transforme pas un 403 en succès. L’ancien flux Sophos 404 est remplacé
+par https://www.sophos.com/en-us/blog/feed. Le lecteur annonce son propre User-Agent,
+sans contourner de blocage ni usurper un navigateur.
+
+Les titres en alphabet non latin conservent leurs caractères dans les clés de
+regroupement ; un titre uniquement composé de symboles utilise l’URL comme repli.
+Le parseur accepte le contenu Atom et résout les liens HTTPS relatifs au flux.
+La file Gemini traduit automatiquement titres et extraits après connexion, tous
+les 6,5 s entre lots. Les traductions publiques sont conservées au maximum sept jours
+et 800 entrées dans localStorage ; les imports manuels sont exclus de ce cache.
+Un quota de débit signalé avec délai peut reprendre automatiquement ; un quota
+quotidien épuisé suspend la file. Aucun basculement payant n’est activé.
+La traduction ne reconstitue jamais un article inaccessible. La fiche propose aussi
+un lien explicite Google Traduction pour ouvrir la page source complète en français,
+sous réserve de son accessibilité ; ce service externe reçoit l’URL au clic.
+
+Le dernier résultat Gemini est conservé dans SOCIAL_STORE et lié à une empreinte
+de la clé et du modèle, sans stocker la clé dans le diagnostic. Sa validité reste
+d’une heure ; la conservation évite un retour artificiel à « non testé » à chaque
+nouvelle instance. Le bouton de test est accessible dans la carte Gemini.
+La carte d’erreur d’import LinkedIn propose directement une relance ciblée afin
+de remplacer l’ancien diagnostic sans détails, sans relancer X.
