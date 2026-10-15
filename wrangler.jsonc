@@ -1,1 +1,27 @@
-{"name":"cyberveille-fr","main":"worker/index.js","compatibility_date":"2026-09-01","workers_dev":true}
+{
+  "name": "cyberveille-fr",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SOCIAL_STORE",
+        "class_name": "SocialStore"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "social-v1",
+      "new_sqlite_classes": [
+        "SocialStore"
+      ]
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "*/15 * * * *"
+    ]
+  }
+}
