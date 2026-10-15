@@ -237,3 +237,42 @@ d’une heure ; la conservation évite un retour artificiel à « non testé » 
 nouvelle instance. Le bouton de test est accessible dans la carte Gemini.
 La carte d’erreur d’import LinkedIn propose directement une relance ciblée afin
 de remplacer l’ancien diagnostic sans détails, sans relancer X.
+
+### 2026-10-15.14 : annuaire demandé, Reddit et parcours de formation
+
+Le catalogue comporte 58 sources automatiques, sans doublonner les flux existants.
+Ajouts : Dark Reading, Habr Infosecurity, Citizen Lab, Hispasec, El Lado del Mal,
+NVD et CISA KEV, ainsi que neuf subreddits (netsec, cybersecurity, blueteamsec,
+redteamsec, HowToHack, ReverseEngineering, osint, computerforensics, AskNetsec).
+Les discussions communautaires sont identifiées et leur priorité plafonnée à 40 ;
+elles ne constituent pas une confirmation primaire. Les refus ou quotas Reddit
+restent signalés, sans garantie de lecture continue ni de contournement.
+
+L’ancien RSS NVD retourne 404 : l’adaptateur utilise l’API NVD CVE 2.0 publique,
+avec filtre CVSS v3 CRITICAL et fenêtre de publication de 30 jours. Il traite au
+maximum les 20 résultats de la réponse : ce n’est pas un inventaire exhaustif des
+CVE critiques, ni une preuve d’exploitation. CISA KEV utilise son véritable JSON,
+distinct du flux de bulletins CISA. Une criticité CVSS et une présence KEV sont
+deux signaux différents. Aucun abonnement ou secret NVD n’est ajouté.
+
+Wiz, TeamT5, le centre canadien pour la cybersécurité et les listes Awesome sont
+conservés dans l’annuaire complémentaire. Les adresses de flux qui n’ont pu être
+confirmées ne sont pas présentées comme fonctionnelles. Les cadences affichées
+sont des conseils de lecture, pas des engagements de collecte en temps réel.
+
+Les requêtes de collecte consultent au maximum 20 sources externes par invocation.
+Les lots sont partagés via les clés `feed:` du Durable Object SOCIAL_STORE et
+complétés par des requêtes HTTP successives du navigateur. Chaque enregistrement
+est borné à 110 Ko et vérifié avant stockage. Un échec peut conserver une copie
+précédente pendant 24 h, explicitement signalée comme ancienne ; un cache de plus
+de 15 minutes n’est pas présenté comme une vérification récente au vert.
+L’API de traduction et les analyses réutilisent les mêmes sources enregistrées.
+
+Tutoriels : 7 parcours, 21 leçons originales en français, dont trois Fondamentaux
+(terminal/fichiers, DNS/HTTP, identité/permissions). Le plan indicatif sur quatre
+mois relie les leçons à TryHackMe Pre Security / Cyber Security 101, PortSwigger
+Web Security Academy, HTB Academy Getting Started et Root-Me. L’ancien lien
+TryHackMe Complete Beginner redirige à la date de vérification. Les plateformes
+restent externes, leurs conditions d’accès sont affichées, aucun achat ni
+abonnement n’est lancé et aucun cours payant n’est reproduit. Les dates sont
+indicatives ; les critères de validation guident la progression réelle.
