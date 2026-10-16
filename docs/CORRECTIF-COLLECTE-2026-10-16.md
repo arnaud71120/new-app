@@ -22,7 +22,7 @@ Reproduction avec un transport simulant six connexions et des réponses 403 dont
 
 ## Vérification
 
-135 tests réussis et construction du Worker valide. Nouveaux contrôles : corps HTTP refusés annulés, corps surdimensionnés annulés, instantané sans téléchargement externe, délai d’un stockage muet et maintien des refus de sécurité, affichage avant fin de collecte et conservation après échec d’un lot.
+136 tests réussis et construction du Worker valide. Nouveaux contrôles : corps HTTP refusés annulés, corps surdimensionnés annulés, instantané sans téléchargement externe, délai d’un stockage muet et maintien des refus de sécurité, affichage avant fin de collecte et conservation après échec d’un lot.
 
 Essai réel depuis l’environnement de développement : le premier lot ZATAZ, IT-Connect, BleepingComputer et The Hacker News a retourné 54 informations regroupées en environ 1,5 seconde. Ce résultat ne garantit pas les mêmes réponses depuis les adresses réseau Cloudflare ; les sources peuvent toujours répondre 403/429 ou être temporairement indisponibles.
 

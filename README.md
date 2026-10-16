@@ -2,7 +2,7 @@
 
 Les réponses HTTP refusées sont désormais fermées pour libérer les connexions Cloudflare. Le chargement affiche d’abord le cache, puis chaque lot de quatre sources au fur et à mesure, avec des délais bornés. Les articles restent visibles si un lot ultérieur échoue et Actualiser redevient disponible.
 
-135 tests, build et recette navigateur validés. Une collecte réelle du premier lot a retourné 54 informations en environ 1,5 seconde depuis l’environnement de développement. Voir [le défaut reproduit, les corrections et leurs limites](docs/CORRECTIF-COLLECTE-2026-10-16.md).
+136 tests, build et recette navigateur validés. Une collecte réelle du premier lot a retourné 54 informations en environ 1,5 seconde depuis l’environnement de développement. Voir [le défaut reproduit, les corrections et leurs limites](docs/CORRECTIF-COLLECTE-2026-10-16.md).
 
 ---
 
