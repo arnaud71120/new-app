@@ -1,0 +1,15 @@
+# Préparation des formations — 2026-10-16.24
+
+Les 30 leçons et les 10 parcours proposent maintenant « Matériel, téléchargements & installation ». Les 33 fiches sont intégrées au cours et ne nécessitent ni clé ni appel Gemini. Le sélecteur Windows / Linux / macOS / Tous filtre les instructions pertinentes. Les fiches peuvent être ouvertes séparément et restent ouvertes lors d’un changement de système ou d’une actualisation du cours.
+
+Chaque fiche précise le rôle de la ressource, son type, ses conditions d’accès, le lien officiel de téléchargement ou d’ouverture, la documentation, les étapes par système, les commandes lorsqu’elles sont adaptées, la vérification, un premier essai et le dépannage. Les outils complémentaires du parcours ne sont pas présentés comme tous obligatoires. Les services Intune, Sentinel et Defender sont distingués des logiciels installables ; les exercices fictifs restent disponibles sans créer de tenant ou de ressource cloud.
+
+Ressources : terminal, Python, navigateur, Git, curl/DNS, éditeur/tableur, ExifTool, Bellingcat Toolkit, SpiderFoot, Amass, Volatility 3, images mémoire, Autopsy, Sleuth Kit, images disque Digital Corpora, Burp Community, Nmap, ZAP, Sigma CLI, Wireshark, PCAP de formation, Zeek, Suricata, Wazuh, VirtualBox, ISO Ubuntu, évaluation Windows, outils Windows, Intune, guide Microsoft des correctifs, KQL, Sentinel/Defender XDR et recherche Google/Bing.
+
+Les images mémoire, images disque, ISO d’installation, machines virtuelles et PCAP sont expliqués séparément. Les liens vers les corpus sont fournis plutôt qu’un binaire opaque. Les tailles, licences, architectures et compatibilités restent à vérifier pour l’échantillon/version choisi. Le catalogue mémoire officiel contient des éléments anciens : leur compatibilité Volatility 3 n’est pas garantie. Les installations passent par les sites ou paquets officiels ; aucun téléchargement ni exécutable n’est lancé depuis Cyberveille.
+
+Le cours Volatility possède deux blocs explicites Windows et Linux/macOS, avec le Python du venv utilisé directement ; aucune désactivation de la politique PowerShell. Les blocs de commandes de tous les cours ont également un fond sombre et un texte lisible dans le nouveau thème.
+
+Le contexte du tutorat intégré et de la copie vers Gemini inclut les liens, toutes les instructions d’installation des ressources de la leçon, la première utilisation et les limites. La question de l’utilisateur reste à la fin.
+
+Validation : 129 tests réussis et build valide. La recette navigateur couvre le filtre Windows, l’absence de commandes Linux dans le bloc filtré, la conservation des volets ouverts, le lien d’image mémoire, le contexte de copie complet et l’affichage à 390 px sans débordement ni erreur JavaScript. Les pages de téléchargement/documentation publiques ont été contrôlées par HTTP ; les portails authentifiés ou protégés restent dépendants du fournisseur. Ces contrôles ne constituent pas une installation réelle de chacun des 33 outils ou environnements.

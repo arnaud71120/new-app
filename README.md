@@ -1,3 +1,11 @@
+# Préparation des formations — version 2026-10-16.24
+
+33 guides d’installation et de première utilisation sont associés aux 30 leçons et aux 10 parcours : liens officiels, choix du système, vérifications, dépannage, images mémoire/disque, PCAP, ISO et machines virtuelles. Les services Web optionnels sont distingués des logiciels à installer. Les préparations de la leçon sont incluses dans le contexte Gemini et sa copie manuelle.
+
+Les guides sont utilisables sans IA. Les volets restent ouverts lors des actualisations et les blocs de commandes sont lisibles dans le thème sombre. Voir [la préparation et la validation](docs/PREPARATION-DES-FORMATIONS.md).
+
+---
+
 # Connexion et collecte automatiques — version 2026-10-16.23
 
 Cloudflare Access ouvre maintenant automatiquement les fonctions privées. Le code personnel et le bouton d’activation de la collecte sont retirés de l’interface. À l’ouverture, la collecte vérifie les passages arrivés à échéance ; les horaires, les limites gratuites et le planificateur existant sont conservés. La signature et l’audience du JWT Cloudflare sont vérifiées côté serveur.
