@@ -366,3 +366,38 @@ compatible côté API ; le navigateur échange maintenant ce code contre une ses
 Détails et limites restantes : `audit/CORRECTIONS-SECURITE-2026-10-15.md`.
 Validation : 98 tests et construction de l’artefact Worker. Vérification distante
 et essai Safari iPhone réel restent distincts des tests simulés.
+
+### 2026-10-16.20 : traductions et références de fuite
+
+Les flux CERT-FR, CERT-EU, CERT-SE et CERT Polska sont retirés du catalogue,
+de la collecte et des diagnostics. Les références pédagogiques restent utilisables.
+Xakep est reconnu comme un média ; seuls les identifiants X explicites rejoignent
+le filtre et la pastille Twitter.
+
+La traduction automatique transmet l’instantané borné réellement affiché,
+traite six articles au maximum avec une sortie JSON structurée, réduit le lot après
+une réponse invalide et continue avec les autres articles. Titres et extraits sont
+évalués séparément : un résumé français ne masque plus un titre russe ou anglais.
+Les résultats sont validés, reliés au texte original et conservés individuellement
+sept jours dans le stockage privé, avec portée propriétaire/modèle. Les imports
+manuels ne sont pas conservés dans ce cache serveur. Un quota Gemini épuisé reste
+une limite externe : aucun fournisseur payant ni contournement automatique ajouté.
+
+Le volet « Traduire un lot avec mon abonnement Gemini Pro » prépare jusqu’à douze
+titres/extraits, les copie avec repli Safari et importe la réponse JSON collée par
+l’utilisateur. Il ne réalise aucun appel API ni envoi automatique au site Gemini.
+Les identifiants et textes originaux sont vérifiés avant l’application des traductions.
+Les titres et extraits sont traduits ; le lien de lecture externe sert pour la page
+complète. Les textes préparés sont effacés au verrouillage.
+
+Les fiches de fuite signalent les plateformes explicitement mentionnées dans les
+publications (BreachForums et variantes, RaidForums, forums XSS/Exploit, Telegram…).
+La recherche de provenance conserve les citations, inclut les références amont et
+sépare les revendications des confirmations rapportées. Les liens de discussion
+ne sont affichés que lorsqu’ils sont réellement cités ; aucun domaine inventé,
+compte de forum ni récupération de fichiers volés. Une mention n’est pas une
+confirmation indépendante de la fuite.
+
+Validation : 112 tests et construction de l’artefact Worker réussis. Les quotas
+réels Gemini et les fonctions privées derrière Cloudflare Access restent à tester
+dans la session connectée du propriétaire.
