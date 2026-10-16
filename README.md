@@ -1,3 +1,13 @@
+# Cockpit de veille — version 2026-10-16.22
+
+Nouvel écran d’accueil interactif : activité quotidienne, priorités, sujets, sources, briefing et état de collecte. Fenêtre de 7 ou 30 jours, exploration des articles par clic. Interface sombre et navigation mobile à cinq rubriques. Les graphiques sont calculés localement à partir du fil chargé.
+
+Les échecs réseau conservent le dernier fil et les lots déjà reçus. Les analyses, la provenance et les rapprochements utilisent la collecte en cache. Les erreurs Gemini restent lisibles ; un dossier complet peut être copié vers le compte Gemini personnel sans appel API. Aucun changement de secret, de facturation, de stockage ou de catalogue.
+
+Recette : 123 tests, build et navigation Chromium à 1440 et 390 px. Voir [la revue complète, les corrections et les limites](docs/REVUE-APPLICATION-2026-10-16.md).
+
+---
+
 # Menu Tutoriels — version 2026-10-15.6
 
 Un menu dédié propose six parcours progressifs : OSINT, forensic, pentest, défense, sécurité réseau et Google dorks. Chaque parcours comprend trois leçons (débutant, intermédiaire, avancé), soit 18 leçons originales rédigées en français avec objectifs, prérequis, notions, exercice en quatre étapes, résultat attendu, erreur fréquente, question de compréhension, corrigé et documentation officielle. Les durées sont indicatives ; la progression est déclarative et stockée dans localStorage sur l’appareil. Pas de compte ou de certificat de formation.
