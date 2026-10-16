@@ -1,0 +1,13 @@
+# Connexion et collecte automatiques — 2026-10-16.23
+
+Le champ de code personnel et le bouton « Activer / vérifier la collecte gratuite » sont retirés. Cloudflare Access reste la porte d’entrée du site. Après identification Cloudflare, les fonctions privées de Cyberveille s’ouvrent automatiquement, sans deuxième code.
+
+Le Worker vérifie la signature RS256 du JWT injecté par Cloudflare, avec les clés publiques de l’équipe existante, l’émetteur et l’audience exacts de cette application, les dates, le type applicatif et l’identité. Un simple en-tête email ou le marqueur navigateur « cloudflare-access » ne donne aucun droit. Les jetons expirés, falsifiés ou émis pour une autre application sont refusés. Le navigateur ne reçoit ni JWT de Cloudflare ni secret propriétaire. Les identifiants publics de l’application Access existante sont épinglés dans ACCESS_CONFIG ; en cas de recréation de l’application Cloudflare ou de changement d’équipe, ils doivent être mis à jour dans le code.
+
+À l’ouverture, `/api/status` vérifie la session, puis le navigateur appelle `/api/session` et `/api/social/auto`. Ce dernier lance uniquement les passages arrivés à échéance, avec les mêmes intervalles et réservations que le planificateur existant : X toutes les six heures et LinkedIn une fois par jour. Les alarmes et le cron existants continuent de fonctionner. L’appel automatique n’est pas une relance manuelle forcée ; les ouvertures répétées ne doublent pas les lancements.
+
+Les quotas mensuels, les confirmations de gratuité, les plafonds Gemini et l’interrupteur d’arrêt restent inchangés. Si la confirmation Bright Data manque, l’automatisme peut lire les publications conservées mais ne lance aucune nouvelle extraction. Les confirmations déjà enregistrées dans Wrangler et les secrets existants sont conservés. Aucun passage payant n’est activé.
+
+La relance LinkedIn uniquement reste disponible pour le dépannage. « Fermer ma session » efface les données temporaires de l’onglet puis ouvre la déconnexion Cloudflare. Les favoris et la progression sont conservés. L’ancien Bearer propriétaire reste compatible côté API, sans demande de saisie dans l’interface.
+
+Validation : 126 tests réussis et build valide. Les tests cryptographiques signent de vrais JWT de test et vérifient les refus. La recette navigateur à 390 px confirme une seule ouverture automatique, l’appel de collecte automatique, l’absence de champ de code et de bouton d’activation, sans débordement horizontal ni erreur JavaScript. Les essais de lancement utilisent un fournisseur simulé sans consommer de crédit. La session privée réelle de l’utilisateur n’est pas disponible dans l’environnement de développement.

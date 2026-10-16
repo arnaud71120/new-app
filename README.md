@@ -1,3 +1,11 @@
+# Connexion et collecte automatiques — version 2026-10-16.23
+
+Cloudflare Access ouvre maintenant automatiquement les fonctions privées. Le code personnel et le bouton d’activation de la collecte sont retirés de l’interface. À l’ouverture, la collecte vérifie les passages arrivés à échéance ; les horaires, les limites gratuites et le planificateur existant sont conservés. La signature et l’audience du JWT Cloudflare sont vérifiées côté serveur.
+
+126 tests et build valides. Voir [le fonctionnement et la validation](docs/CONNEXION-AUTOMATIQUE.md).
+
+---
+
 # Cockpit de veille — version 2026-10-16.22
 
 Nouvel écran d’accueil interactif : activité quotidienne, priorités, sujets, sources, briefing et état de collecte. Fenêtre de 7 ou 30 jours, exploration des articles par clic. Interface sombre et navigation mobile à cinq rubriques. Les graphiques sont calculés localement à partir du fil chargé.
