@@ -16,8 +16,8 @@ Cyberveille ne lit pas les cookies ni les identifiants Google de l’utilisateur
 L’outil officiel Gemini CLI permet une connexion avec le compte Google associé
 à Google AI Pro et une exécution en mode sans interface, avec une réponse JSON.
 La documentation décrit l’utilisation des identifiants préalablement enregistrés
-pour ce mode. La documentation affiche actuellement 1 500 requêtes par jour pour
-Google AI Pro ; la limite et les modèles disponibles peuvent évoluer. Ce n’est
+pour ce mode. Les limites et les modèles disponibles dépendent de l’offre, de la connexion et
+des conditions actuelles de Google ; consultez https://geminicli.com/docs/quota-and-pricing/. Ce n’est
 pas un accès illimité ni le transfert de quota vers la clé API classique.
 
 Architecture possible :

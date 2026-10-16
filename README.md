@@ -1,3 +1,13 @@
+# EDR, laboratoires détaillés et Gemini — version 2026-10-16.26
+
+Deux nouveaux parcours : Cortex XDR et Microsoft Defender AV/EDR, six leçons chacun. Les 42 leçons et 12 parcours incluent maintenant le montage de laboratoire, la topologie, les prérequis, les commandes et les vérifications, avec 36 fiches de ressources. Les fonctions cloud restent soumises aux licences et permissions ; un mode fictif permet de travailler sans tenant.
+
+Gemini : priorité aux demandes de l’onglet, pause des traductions pendant les cours/diagnostics, mode à la demande facultatif, cache de tutorat borné et copie complète vers le compte Gemini. Les quotas API restent distincts de l’abonnement Pro. La possibilité d’un relais privé Gemini CLI est documentée, non activée.
+
+142 tests et build valides. Voir [les contenus, le fonctionnement et les limites](docs/EDR-LABORATOIRES-GEMINI.md).
+
+---
+
 # Correction du blocage des flux — version 2026-10-16.25
 
 Les réponses HTTP refusées sont désormais fermées pour libérer les connexions Cloudflare. Le chargement affiche d’abord le cache, puis chaque lot de quatre sources au fur et à mesure, avec des délais bornés. Les articles restent visibles si un lot ultérieur échoue et Actualiser redevient disponible.
