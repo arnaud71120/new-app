@@ -401,3 +401,31 @@ confirmation indépendante de la fuite.
 Validation : 112 tests et construction de l’artefact Worker réussis. Les quotas
 réels Gemini et les fonctions privées derrière Cloudflare Access restent à tester
 dans la session connectée du propriétaire.
+
+### 2026-10-16.21 : profil LinkedIn et images
+
+Bastien Biren (`https://www.linkedin.com/in/biren-bastien`) rejoint la sélection,
+sans paramètres de partage : 16 personnes, 10 comptes X et 10 profils LinkedIn.
+Les libellés et réservations suivent ces nombres ; le plafond mensuel reste 4 000.
+Le profil sera inclus dans la prochaine collecte prévue, sans relance forcée.
+
+Les images fournies par les flux RSS/Atom et les résultats sociaux sont conservées
+comme métadonnées (quatre maximum par publication), puis affichées dans un volet
+« Images de la publication ». Elles sont chargées directement depuis leur origine
+à l’ouverture du volet, sans referrer ni nouvelle collecte payante. Les avatars,
+pixels connus, SVG/documents, adresses privées et hôtes non approuvés sont exclus.
+La CSP autorise seulement les domaines sources/CDN approuvés ; les scripts restent
+protégés par nonce. Un refus/une expiration d’image donne un lien vers l’original.
+Les images ne sont pas téléchargées ou transmises au modèle IA par le serveur.
+
+Les profils parents des résultats imbriqués ne fournissent pas leurs photos aux
+posts enfants. Une activation/vérification manuelle de collecte peut réimporter
+une fois les médias du dernier snapshot existant, sans nouvelle extraction ni
+réservation supplémentaire. L’apparition d’une image dépend des données réelles
+reçues et de l’accessibilité du CDN ; les anciennes lignes sans médias ne peuvent
+pas être complétées à partir de rien.
+
+Options Gemini hors clé API, état non activé du CLI/modèle local et références
+vérifiées : `docs/GEMINI-SANS-CLE-API.md`. La copie Gemini Pro existe déjà ; aucune
+nouvelle machine, liaison OAuth ou dépense automatique n’a été mise en place.
+Validation : 119 tests et construction valide.
