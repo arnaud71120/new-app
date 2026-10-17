@@ -1,3 +1,13 @@
+## Version 2026-10-17.1 — connexion réessayée et cours illustrés
+
+Le bandeau sort des états d’attente après une panne et réessaie automatiquement.
+Le délai des requêtes couvre aussi la lecture JSON ; le fil se charge sans
+attendre la collecte sociale. Les 42 leçons possèdent un schéma pédagogique
+interactif, quatre étapes expliquées et une animation avec pause/remise à zéro.
+Les légendes rejoignent le contexte Gemini, sans appel API supplémentaire.
+Validation : 149 tests et construction valide. Détails et limites :
+[Connexion et schémas](docs/CONNEXION-ET-SCHEMAS-2026-10-17.md).
+
 # EDR, laboratoires détaillés et Gemini — version 2026-10-16.26
 
 Deux nouveaux parcours : Cortex XDR et Microsoft Defender AV/EDR, six leçons chacun. Les 42 leçons et 12 parcours incluent maintenant le montage de laboratoire, la topologie, les prérequis, les commandes et les vérifications, avec 36 fiches de ressources. Les fonctions cloud restent soumises aux licences et permissions ; un mode fictif permet de travailler sans tenant.
