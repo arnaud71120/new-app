@@ -1,3 +1,30 @@
+## Version 2026-10-19.3 — secours borné pour les clés Access
+
+Le diagnostic de production a confirmé `jwks_unavailable` avec un jeton reçu
+dans l’en-tête. L’AUD et l’émetteur correspondent. Le point JWKS officiel répond
+correctement depuis l’environnement de développement ; la cause du refus réseau
+spécifique au Worker n’est pas encore connue.
+
+La lecture distante reste prioritaire et ses erreurs sont précisées (HTTP,
+délai, réponse ou clés invalides). Pendant une panne, les deux clés **publiques**
+obtenues par TLS le 19 octobre peuvent vérifier les sessions existantes jusqu’au
+**26 octobre 2026 à 10:52 UTC**, au plus. Ce secours temporaire ne remplace pas
+la résolution de la panne distante. Aucun jeton, clé privée ou secret n’est
+embarqué. Les signatures, dates, identité, type, audience et émetteur restent
+vérifiés. Un JWKS distant disponible fait autorité, y compris si une ancienne
+clé n’y figure plus. Une clé de jeton inconnue reste refusée.
+
+En mode secours, `/api/status` indique `accessDiagnostic.keySource: bundled`,
+`jwksReason` et `fallbackExpiresAt`. Ces informations permettent de poursuivre
+le diagnostic distant sans demander le jeton de l’utilisateur. Le build inclut
+les clés publiques dans l’artefact ESM ; Wrangler résout le module source.
+
+Validation : 165 tests et build Worker valides, dont panne HTTP, refus d’une
+signature falsifiée, borne d’expiration et priorité des clés distantes.
+La restauration de la session réelle reste à confirmer après déploiement.
+
+---
+
 ## Version 2026-10-19.2 — diagnostic de la session Cloudflare
 
 `/api/status` expose maintenant `accessDiagnostic`, limité à un code de résultat
