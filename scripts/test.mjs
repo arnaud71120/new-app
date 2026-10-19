@@ -26,9 +26,9 @@ test('Une redirection vers une cible privée n’est jamais suivie',async()=>{co
 async function translationHarness(events,respond){
  const page=await (await worker.fetch(new Request('https://test/'),{},{})).text();
  const script=page.match(/<script[^>]*>([\s\S]*)<\/script>/)[1];
- const code=script.slice(script.indexOf('let translationRunning='),script.indexOf('function render(){'));
+ const code=script.slice(script.indexOf('function accessFailureMessage()'),script.indexOf('function updateSessionState()'))+script.slice(script.indexOf('let translationRunning='),script.indexOf('function render(){'));
  const timers=[];const elements=new Map();const requests=[];
- const context=vm.createContext({data:{mode:'live',events},translations:new Map(),accessToken:'fixture-private-code',connectionStatus:{ai:true},document:{hidden:false,addEventListener(){}},$:selector=>{if(!elements.has(selector))elements.set(selector,{value:'gemini',textContent:''});return elements.get(selector);},setTimeout:fn=>{timers.push(()=>{vm.runInContext('translationNextAt=0',context);return fn();});return timers.length;},clearTimeout(){},render(){},fetch:async(url,options)=>{const input=JSON.parse(options.body);requests.push(input);return respond(input);}});
+ const context=vm.createContext({data:{mode:'live',events},translations:new Map(),accessToken:'fixture-private-code',connectionState:'disconnected',connectionStatus:{ai:true},document:{hidden:false,addEventListener(){}},$:selector=>{if(!elements.has(selector))elements.set(selector,{value:'gemini',textContent:''});return elements.get(selector);},setTimeout:fn=>{timers.push(()=>{vm.runInContext('translationNextAt=0',context);return fn();});return timers.length;},clearTimeout(){},render(){},fetch:async(url,options)=>{const input=JSON.parse(options.body);requests.push(input);return respond(input);}});
  new vm.Script(code).runInContext(context);
  return {context,timers,elements,requests,run:()=>vm.runInContext('startAutoTranslation()',context)};
 }
@@ -251,4 +251,26 @@ test('La mise à jour réimporte les anciens résultats X et LinkedIn sans nouve
  await storage.put('state',{platforms:{x:{lastSnapshotId:'oldX',lastCount:0,importRevision:3,mediaRevision:1,nextAt:Date.now()+86400000},linkedin:{lastSnapshotId:'oldLI',lastCount:0,importRevision:3,mediaRevision:1,lastAttempt:Date.now()-7200000,nextAt:Date.now()+86400000}},budget:{month,used:40}});
  const original=globalThis.fetch;let reads=0;globalThis.fetch=async(url,options)=>{assert.ok(!options.method);reads++;return new Response(JSON.stringify(String(url).includes('oldX')?[{url:'https://x.com/fuitesinfos/status/12345678',description:'Publication publique récupérée.'}]:[{url:'https://www.linkedin.com/posts/test-activity-123456789',use_url:'https://www.linkedin.com/in/anis-ayari',original_post_text:'Une publication publique récupérée.'}]));};
  try{const obj=new SocialStore({storage},{BRIGHTDATA_TOKEN:'fixture',BRIGHTDATA_FREE_ONLY_CONFIRMED:'true'});await obj.fetch(new Request('https://internal/tick'));await obj.fetch(new Request('https://internal/tick'));const d=await(await obj.fetch(new Request('https://internal/data'))).json();assert.equal(reads,2);assert.equal(d.articles.length,2);assert.equal(d.budget.used,40);assert.equal(d.platforms.linkedin.importRevision,4);}finally{globalThis.fetch=original;}
+});
+
+test('Le diagnostic Access explique les refus sans exposer jeton, identité ni claims',async()=>{
+ const fixture=await accessFixture(),mod=await import('../worker/index.js?access-diagnostic');const original=globalThis.fetch;
+ globalThis.fetch=async()=>new Response(JSON.stringify({keys:[fixture.jwk]}));
+ try{
+  const cases=[['token_missing',null],['issuer_mismatch',await fixture.sign({iss:'https://other.cloudflareaccess.com'})],['audience_mismatch',await fixture.sign({aud:['other-app']})],['token_expired',await fixture.sign({exp:1})],['token_type_invalid',await fixture.sign({type:'service'})],['identity_missing',await fixture.sign({email:undefined})],['verified',await fixture.sign()]];
+  for(const [code,token] of cases){const req=new Request('https://test/api/status',{headers:token?{'Cf-Access-Jwt-Assertion':token}:{}});const r=await mod.default.fetch(req,{},{}),body=await r.json();assert.equal(body.accessDiagnostic.code,code);assert.equal(body.access,code==='verified');assert.deepEqual(Object.keys(body.accessDiagnostic).sort(),['code','source']);const text=JSON.stringify(body);assert.ok(!text.includes('owner@example.com'));if(token)assert.ok(!text.includes(token));}
+  const cookieRequest=new Request('https://test/api/status',{headers:{Cookie:'CF_Authorization='+await fixture.sign()}});assert.deepEqual(await mod.accessDiagnostic(cookieRequest),{code:'verified',source:'cookie'});
+ }finally{globalThis.fetch=original;}
+});
+test('Une panne JWKS est distinguée d’un jeton refusé et reste bloquante',async()=>{
+ const fixture=await accessFixture(),mod=await import('../worker/index.js?access-jwks-failure'),original=globalThis.fetch;globalThis.fetch=async()=>{throw Error('Network unavailable');};
+ try{const req=new Request('https://test/api/status',{headers:{'Cf-Access-Jwt-Assertion':await fixture.sign()}});assert.equal(await mod.authorized(req,{}),false);assert.deepEqual(await mod.accessDiagnostic(req),{code:'jwks_unavailable',source:'header'});}finally{globalThis.fetch=original;}
+});
+test('L’interface explique le refus Access et ne demande plus un champ de code supprimé',async()=>{
+ const page=await(await worker.fetch(new Request('https://test/'),{},{})).text(),js=page.match(/<script[^>]*>([\s\S]*)<\/script>/)[1];
+ assert.ok(!page.includes('Saisissez votre code dans Connexions privées ci-dessous.'));
+ const ctx=vm.createContext({connectionStatus:{accessDiagnostic:{code:'token_missing'}},connectionState:'disconnected'});
+ new vm.Script(js.slice(js.indexOf('function accessFailureMessage()'),js.indexOf('function updateSessionState()'))).runInContext(ctx);
+ assert.match(vm.runInContext('accessFailureMessage()',ctx),/aucun jeton Access/);
+ ctx.connectionStatus={accessDiagnostic:{code:'jwks_unavailable'}};assert.match(vm.runInContext('accessFailureMessage()',ctx),/clés publiques/);
 });

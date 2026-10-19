@@ -1,3 +1,20 @@
+## Version 2026-10-19.2 — diagnostic de la session Cloudflare
+
+`/api/status` expose maintenant `accessDiagnostic`, limité à un code de résultat
+et à la provenance du jeton (`header`, `cookie`, `none`). Aucun jeton, email,
+claim ou secret n'est retourné. Les refus distinguent notamment jeton absent,
+application/émetteur différents, expiration, identité absente, clés publiques
+inaccessibles et signature invalide. Les contrôles cryptographiques sont
+conservés ; un diagnostic ne donne aucun droit.
+
+Sources et traduction affichent la raison disponible au lieu d'une attente
+permanente ou d'une demande de code dont le champ a été supprimé. L'AUD et le
+JWKS de production ont été comparés aux valeurs du code : ils correspondent.
+La cause du refus réel reste à déterminer avec le nouveau diagnostic sur le
+navigateur déjà authentifié de l'utilisateur.
+
+---
+
 ## Version 2026-10-19.1 — reprise de la collecte sociale
 
 Le suivi X/LinkedIn reprend après une panne réseau et continue à vérifier les
