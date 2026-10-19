@@ -198,3 +198,57 @@ test('requestBodyLimit mapping tests', async () => {
   assert.equal(requestBodyLimit('/api/course'), 4000);
   assert.equal(requestBodyLimit('/unknown/path'), 40000);
 });
+
+// Regressions: provider payloads, failed storage and interrupted browser polling.
+test('Les URL X identifient les auteurs suivis sans accepter un domaine ou un auteur étranger',async()=>{
+ const {normalizeSocialRows}=await import('../worker/index.js');
+ const row={url:'https://x.com/fuitesinfos/status/12345678',description:'Publication publique de veille cyber.'};
+ assert.equal(normalizeSocialRows('x',[row]).length,1);
+ for(const other of [{...row,url:'https://x.com/inconnu/status/12345678'},{...row,url:'https://x.com.evil.test/fuitesinfos/status/12345678'},{...row,user_posted:'inconnu'}])assert.equal(normalizeSocialRows('x',[other]).length,0);
+});
+test('Le texte original LinkedIn est importé même sans post_text',async()=>{
+ const {normalizeSocialRows}=await import('../worker/index.js');
+ const row={url:'https://www.linkedin.com/posts/test-activity-123456789',use_url:'https://www.linkedin.com/in/anis-ayari',original_post_text:'Une publication publique de veille cyber.'};
+ assert.equal(normalizeSocialRows('linkedin',[row])[0]?.summary,row.original_post_text);
+});
+test('Une panne du stockage social produit HTTP 503 et ne simule pas une collecte vide réussie',async()=>{
+ const token='social-storage-regression-owner-token';
+ for(const body of [{error:'Stockage indisponible'},{articles:undefined}]){
+  const env={APP_ACCESS_TOKEN:token,SOCIAL_STORE:{idFromName:n=>n,get:id=>({fetch:async()=>new Response(JSON.stringify(id==='cyberveille-security-v1'?{ok:true}:body),{status:id==='cyberveille-security-v1'?200:503})})}};
+  const r=await worker.fetch(new Request('https://test/api/social',{headers:{Authorization:'Bearer '+token}}),env,{});
+  assert.equal(r.status,503);assert.ok((await r.json()).error);
+ }
+});
+test('Une erreur de lancement du stockage social est propagée sans lecture trompeuse',async()=>{
+ const token='social-tick-regression-owner-token';let reads=0;
+ const env={APP_ACCESS_TOKEN:token,BRIGHTDATA_TOKEN:'fixture',BRIGHTDATA_FREE_ONLY_CONFIRMED:'true',SOCIAL_STORE:{idFromName:n=>n,get:id=>({fetch:async r=>{if(id==='cyberveille-security-v1')return new Response('{"ok":true}');if(String(r).includes('/tick'))return new Response('{"error":"Stockage indisponible"}',{status:503});reads++;return new Response('{"articles":[]}');}})}};
+ const r=await worker.fetch(new Request('https://test/api/social/auto',{method:'POST',headers:{Origin:'https://test',Authorization:'Bearer '+token}}),env,{});
+ assert.equal(r.status,503);assert.equal(reads,0);
+});
+async function socialHarness(handler){
+ const page=await(await worker.fetch(new Request('https://test/'),{},{})).text(),js=page.match(/<script[^>]*>([\s\S]*)<\/script>/)[1],elements=new Map(),timers=[];
+ const ctx=vm.createContext({accessToken:'test-session',socialArticles:[{id:'saved'}],data:{mode:'live',events:[{articles:[{id:'saved',sourceId:'x-brightdata'}]}]},fetch:handler,setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout(){},$:key=>{if(!elements.has(key))elements.set(key,{textContent:''});return elements.get(key);},mergeEvents:articles=>[{articles}],render(){},startAutoTranslation(){}});
+ new vm.Script(js.slice(js.indexOf('let socialLoading='),js.indexOf("try{const cached=JSON.parse(localStorage.getItem('cyberveille-translations')",js.indexOf('let socialLoading=')))).runInContext(ctx);
+ return {ctx,elements,timers,run:()=>vm.runInContext('loadSocial()',ctx)};
+}
+test('Le suivi social reprend après une panne réseau en conservant les publications',async()=>{
+ let calls=0;const h=await socialHarness(async()=>{if(++calls===1)throw Error('Panne réseau');return {ok:true,json:async()=>({articles:[{id:'new',sourceId:'x-brightdata'}],platforms:{x:{status:'ready'}},configured:true,freeOnlyConfirmed:true,storage:true})};});
+ await h.run();assert.equal(h.ctx.socialArticles[0].id,'saved');assert.equal(h.timers.length,1);assert.equal(h.timers[0].ms,30000);
+ await h.timers[0].fn();assert.equal(h.ctx.socialArticles[0].id,'new');assert.equal(h.timers.at(-1).ms,300000);
+});
+test('Un stockage en erreur ou une session expirée ne vide pas le fil social',async()=>{
+ for(const status of [200,401,503]){
+  const h=await socialHarness(async()=>({ok:status===200,status,json:async()=>({error:'Service indisponible'})}));
+  await h.run();assert.equal(h.ctx.socialArticles[0].id,'saved');assert.equal(h.ctx.data.events[0].articles[0].id,'saved');assert.equal(h.timers.length,status===401?0:1);
+ }
+});
+test('Une session changée pendant une panne sociale ne reçoit aucun résultat ni rappel',async()=>{
+ let reject;const h=await socialHarness(()=>new Promise((_,r)=>reject=r));const task=h.run();h.ctx.accessToken='';reject(Error('Requête annulée'));await task;
+ assert.equal(h.timers.length,0);assert.equal(h.elements.get('#social-status').textContent,'Lecture du stockage social…');
+});
+test('La mise à jour réimporte les anciens résultats X et LinkedIn sans nouvelle extraction',async()=>{
+ const {SocialStore}=await import('../worker/index.js'),storage=memoryStore();const month=new Date().toISOString().slice(0,7);
+ await storage.put('state',{platforms:{x:{lastSnapshotId:'oldX',lastCount:0,importRevision:3,mediaRevision:1,nextAt:Date.now()+86400000},linkedin:{lastSnapshotId:'oldLI',lastCount:0,importRevision:3,mediaRevision:1,lastAttempt:Date.now()-7200000,nextAt:Date.now()+86400000}},budget:{month,used:40}});
+ const original=globalThis.fetch;let reads=0;globalThis.fetch=async(url,options)=>{assert.ok(!options.method);reads++;return new Response(JSON.stringify(String(url).includes('oldX')?[{url:'https://x.com/fuitesinfos/status/12345678',description:'Publication publique récupérée.'}]:[{url:'https://www.linkedin.com/posts/test-activity-123456789',use_url:'https://www.linkedin.com/in/anis-ayari',original_post_text:'Une publication publique récupérée.'}]));};
+ try{const obj=new SocialStore({storage},{BRIGHTDATA_TOKEN:'fixture',BRIGHTDATA_FREE_ONLY_CONFIRMED:'true'});await obj.fetch(new Request('https://internal/tick'));await obj.fetch(new Request('https://internal/tick'));const d=await(await obj.fetch(new Request('https://internal/data'))).json();assert.equal(reads,2);assert.equal(d.articles.length,2);assert.equal(d.budget.used,40);assert.equal(d.platforms.linkedin.importRevision,4);}finally{globalThis.fetch=original;}
+});

@@ -1,3 +1,25 @@
+## Version 2026-10-19.1 — reprise de la collecte sociale
+
+Le suivi X/LinkedIn reprend après une panne réseau et continue à vérifier les
+publications stockées une fois une collecte terminée. Une erreur du stockage ou
+du lancement reste une erreur HTTP ; elle ne remplace plus le fil par une liste
+vide. Les URL de posts X peuvent identifier un auteur suivi lorsque le champ
+`user_posted` manque ; les textes LinkedIn `original_post_text` et
+`post_text_html` sont reconnus.
+
+Au prochain passage de collecte, les derniers snapshots de l'ancien importeur
+sont relus une fois, sans nouvelle extraction ni réservation de résultats. Les
+lancements incertains restent bloqués. Les messages de suspension globale sont
+visibles dans Sources.
+
+Validation : les huit nouveaux scénarios échouent sur la version précédente ;
+158 tests passent après correction, et le build Worker est valide. Les essais
+Bright Data sont simulés. Le fonctionnement et les secrets du déploiement
+Cloudflare réel restent à vérifier ; aucune collecte réelle ni dépense n'a été
+engagée depuis cet environnement.
+
+---
+
 ## Version 2026-10-17.1 — connexion réessayée et cours illustrés
 
 Le bandeau sort des états d’attente après une panne et réessaie automatiquement.
