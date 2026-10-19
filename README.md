@@ -1,3 +1,32 @@
+## Version 2026-10-19.4 — fenêtre de collecte sociale et fraîcheur
+
+Le résultat réel X communiqué le 19 octobre indique une collecte terminée à
+08:18 UTC, 26 lignes reçues, 24 publications reconnues et une erreur de profil
+sans posts publics. Les publications visibles restent anciennes : la date de
+collecte ne constitue pas une preuve de fraîcheur.
+
+Le code calculait `since` sans le transmettre. Les prochaines requêtes incluent
+maintenant `start_date`. X demande explicitement au plus trois posts par profil,
+sans reposts ; LinkedIn demande les posts de l’auteur. La première requête du
+nouveau format couvre sept jours pour permettre une reprise ; les suivantes
+conservent un recouvrement d’au moins un jour, borné à sept jours. Les limites
+par entrée, horaires et réservations mensuelles restent inchangés. Aucun
+lancement supplémentaire ni déblocage d’un démarrage incertain n’est imposé.
+
+Le suivi indique la publication la plus récente conservée, la date de fin de
+collecte et le prochain passage possible. Une suspension globale conserve son
+explication pendant les lectures suivantes. Les anciens articles restent
+consultables avec leur vraie date.
+
+Validation : 168 tests et build Worker valides ; transmission et persistance de
+la fenêtre, absence de relancement dans l’intervalle, budget constant et dates
+réelles des posts testés. Les champs correspondent aux schémas officiels des
+datasets Bright Data. L’acceptation réelle des nouveaux filtres et le retour de
+posts plus récents restent à vérifier au prochain passage ; le fournisseur
+peut ne pas rendre accessibles toutes les publications.
+
+---
+
 ## Version 2026-10-19.3 — secours borné pour les clés Access
 
 Le diagnostic de production a confirmé `jwks_unavailable` avec un jeton reçu
