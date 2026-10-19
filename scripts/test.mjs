@@ -264,7 +264,7 @@ test('Le diagnostic Access explique les refus sans exposer jeton, identité ni c
 });
 test('Une panne JWKS est distinguée d’un jeton refusé et reste bloquante',async()=>{
  const fixture=await accessFixture(),mod=await import('../worker/index.js?access-jwks-failure'),original=globalThis.fetch;globalThis.fetch=async()=>{throw Error('Network unavailable');};
- try{const req=new Request('https://test/api/status',{headers:{'Cf-Access-Jwt-Assertion':await fixture.sign()}});assert.equal(await mod.authorized(req,{}),false);assert.deepEqual(await mod.accessDiagnostic(req),{code:'jwks_unavailable',source:'header'});}finally{globalThis.fetch=original;}
+ try{const req=new Request('https://test/api/status',{headers:{'Cf-Access-Jwt-Assertion':await fixture.sign()}});assert.equal(await mod.authorized(req,{}),false);assert.deepEqual(await mod.accessDiagnostic(req),{code:'jwks_unavailable',source:'header',jwksReason:'network_error'});}finally{globalThis.fetch=original;}
 });
 test('L’interface explique le refus Access et ne demande plus un champ de code supprimé',async()=>{
  const page=await(await worker.fetch(new Request('https://test/'),{},{})).text(),js=page.match(/<script[^>]*>([\s\S]*)<\/script>/)[1];
@@ -273,4 +273,32 @@ test('L’interface explique le refus Access et ne demande plus un champ de code
  new vm.Script(js.slice(js.indexOf('function accessFailureMessage()'),js.indexOf('function updateSessionState()'))).runInContext(ctx);
  assert.match(vm.runInContext('accessFailureMessage()',ctx),/aucun jeton Access/);
  ctx.connectionStatus={accessDiagnostic:{code:'jwks_unavailable'}};assert.match(vm.runInContext('accessFailureMessage()',ctx),/clés publiques/);
+});
+
+async function accessFallbackFixture(options={}){
+ const {readFile}=await import('node:fs/promises'),fixture=await accessFixture(),{ACCESS_CONFIG}=await import('../worker/index.js');
+ const fallback={issuer:ACCESS_CONFIG.issuer,fetchedAt:new Date(Date.now()-60000).toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),keys:[fixture.jwk],...options};
+ const source=(await readFile(new URL('../worker/index.js',import.meta.url),'utf8')).replace("import {ACCESS_JWKS_FALLBACK} from './access-jwks.js';",'const ACCESS_JWKS_FALLBACK='+JSON.stringify(fallback)+';');
+ const mod=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// '+crypto.randomUUID()).toString('base64'));
+ return {fixture,mod};
+}
+test('Une panne JWKS accepte seulement un jeton signé par la clé de secours épinglée',async()=>{
+ const {fixture,mod}=await accessFallbackFixture(),original=globalThis.fetch;globalThis.fetch=async()=>new Response('Denied',{status:403});
+ try{const token=await fixture.sign(),req=new Request('https://test/api/status',{headers:{'Cf-Access-Jwt-Assertion':token}});assert.equal(await mod.authorized(req,{}),true);const d=await mod.accessDiagnostic(req);assert.equal(d.code,'verified');assert.equal(d.keySource,'bundled');assert.equal(d.jwksReason,'http_403');assert.ok(!JSON.stringify(d).includes(token));
+  const invalid=token.slice(0,token.lastIndexOf('.')+1)+Buffer.alloc(256).toString('base64url');assert.equal(await mod.authorized(new Request('https://test/',{headers:{'Cf-Access-Jwt-Assertion':invalid}}),{}),false);
+  for(const claims of [{aud:['wrong-app']},{exp:1},{iss:'https://other.cloudflareaccess.com'}])assert.equal(await mod.authorized(new Request('https://test/',{headers:{'Cf-Access-Jwt-Assertion':await fixture.sign(claims)}}),{}),false);
+ }finally{globalThis.fetch=original;}
+});
+test('Une clé de secours expirée ou d’un autre émetteur reste refusée pendant une panne JWKS',async()=>{
+ const original=globalThis.fetch;globalThis.fetch=async()=>{throw Error('Network unavailable');};
+ try{for(const options of [{expiresAt:new Date(Date.now()-1).toISOString()},{issuer:'https://other.cloudflareaccess.com'}]){const {fixture,mod}=await accessFallbackFixture(options);const req=new Request('https://test/',{headers:{'Cf-Access-Jwt-Assertion':await fixture.sign()}});assert.equal(await mod.authorized(req,{}),false);assert.equal((await mod.accessDiagnostic(req)).code,'jwks_unavailable');}}finally{globalThis.fetch=original;}
+});
+test('Le JWKS distant disponible reste prioritaire sur les anciennes clés épinglées',async()=>{
+ const {fixture,mod}=await accessFallbackFixture(),other=await accessFixture(),original=globalThis.fetch;globalThis.fetch=async()=>new Response(JSON.stringify({keys:[{...other.jwk,kid:'new-key'}]}));
+ try{const req=new Request('https://test/',{headers:{'Cf-Access-Jwt-Assertion':await fixture.sign()}});assert.equal(await mod.authorized(req,{}),false);assert.equal((await mod.accessDiagnostic(req)).code,'signing_key_missing');}finally{globalThis.fetch=original;}
+});
+test('Les clés embarquées sont publiques et leur fenêtre de secours est bornée',async()=>{
+ const {ACCESS_JWKS_FALLBACK:f}=await import('../worker/access-jwks.js'),{fallbackAccessKeys}=await import('../worker/index.js');
+ assert.ok(f.keys.length>0);for(const k of f.keys){assert.equal(k.kty,'RSA');assert.deepEqual(Object.keys(k).sort(),['alg','e','kid','kty','n','use']);}
+ const start=Date.parse(f.fetchedAt),end=Date.parse(f.expiresAt);assert.ok(end-start<=7*86400000);assert.equal(fallbackAccessKeys(start-1).length,0);assert.equal(fallbackAccessKeys(end).length,0);assert.equal(fallbackAccessKeys(start).length,f.keys.length);
 });
