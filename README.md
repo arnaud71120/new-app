@@ -1,3 +1,30 @@
+## Version 2026-10-19.5 — actualisation relançable
+
+Le bouton Actualiser restait désactivé pendant tous les lots de flux publics.
+La lecture des publications X/LinkedIn n’était lancée qu’après leur traitement.
+Une collecte lente donnait donc l’impression que le bouton ne répondait plus,
+y compris pour les publications sociales déjà enregistrées.
+
+Le bouton reste utilisable et affiche « Recommencer » pendant la collecte.
+Un clic remplace la tentative précédente : le transport et la lecture du corps
+JSON sont annulés côté navigateur, et les retours tardifs ne modifient plus le
+nouvel état. Le message d’ancienne panne est remplacé dès le début par un état
+d’avancement. Cache et lots disposent de délais distincts ; les articles déjà
+chargés restent consultables en cas d’échec.
+
+La lecture des publications sociales débute immédiatement, indépendamment des
+flux publics. Elle ne force aucune nouvelle extraction Bright Data et ne change
+ni intervalle ni quota. Une panne réelle d’un serveur externe peut toujours
+interrompre la collecte : ce correctif assure la reprise et la visibilité de
+l’action, sans prétendre réparer le service distant.
+
+Validation : 170 tests et build valides. Tests du remplacement d’une demande
+bloquée, du refus des retours tardifs, de l’annulation pendant un JSON bloqué et
+de la lecture sociale indépendante. Vérification du JS généré via VM Node ;
+le geste réel sur le navigateur mobile reste à confirmer après déploiement.
+
+---
+
 ## Version 2026-10-19.4 — fenêtre de collecte sociale et fraîcheur
 
 Le résultat réel X communiqué le 19 octobre indique une collecte terminée à
