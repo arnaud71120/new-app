@@ -185,3 +185,16 @@ test('Le cookie Access de repli subit les mêmes vérifications cryptographiques
 test('Les 42 leçons possèdent un schéma spécifique, quatre étapes expliquées et leur contexte Gemini',async()=>{const {LEARNING_TRACKS,buildCoursePrompt}=await import('../worker/index.js');const sequences=new Set();let count=0;for(const track of LEARNING_TRACKS)for(const lesson of track.lessons){count++;const v=lesson.visual;assert.equal(v.title,lesson.title);assert.equal(v.steps.length,4);assert.ok(v.lab);for(const step of v.steps){assert.ok(step.label.length>2);assert.ok(step.text.length>25);}sequences.add(JSON.stringify(v.steps));const prompt=buildCoursePrompt(track,lesson,'Explique le schéma');assert.ok(prompt.includes('SCHÉMA DU COURS ET LÉGENDE'));assert.ok(prompt.includes(v.steps[2].text));}assert.equal(count,42);assert.equal(sequences.size,42);});
 
 test('Les schémas SVG et leurs légendes échappent le contenu et restent utilisables sans animation',async()=>{const {LEARNING_TRACKS}=await import('../worker/index.js');const page=await(await worker.fetch(new Request('https://test/'),{},{})).text(),js=page.match(/<script[^>]*>([\s\S]*)<\/script>/)[1],lesson=structuredClone(LEARNING_TRACKS[0].lessons[0]);lesson.visual.steps[0].label='<img onerror=alert(1)>';const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const ctx=vm.createContext({esc,lesson});new vm.Script(js.slice(js.indexOf('const visualStates='),js.indexOf('const labExpanded='))).runInContext(ctx);const html=vm.runInContext('renderLessonVisual(lesson)',ctx);assert.ok(html.includes('<svg'));assert.ok(html.includes('role="img"'));assert.ok(html.includes('aria-pressed="true"'));assert.ok(!html.includes('<img onerror'));assert.ok(html.includes('&lt;img'));assert.ok(!html.includes('is-playing'));assert.ok(page.includes('prefers-reduced-motion:reduce'));});
+
+
+
+
+
+test('requestBodyLimit mapping tests', async () => {
+  const { requestBodyLimit } = await import('../worker/index.js');
+  assert.equal(requestBodyLimit('/feeds'), 3000000);
+  assert.equal(requestBodyLimit('/gemini-health'), 3000);
+  assert.equal(requestBodyLimit('/api/course-chat'), 128000);
+  assert.equal(requestBodyLimit('/api/course'), 4000);
+  assert.equal(requestBodyLimit('/unknown/path'), 40000);
+});
