@@ -1,3 +1,18 @@
+## Version 2026-10-19.6 — Administration
+
+Bouton **⚙ Administration** à côté d’Actualiser : catalogue persistant de
+sources, ajout/modification/suppression, activation et intervalle minimum,
+tests individuels avec codes HTTP et étapes, diagnostics des services et
+horaires X/LinkedIn. Les nouvelles sources sont utilisées par la collecte sans
+redéploiement. Pauses des flux/nouveaux lancements sociaux, journal des cent
+dernières modifications, restauration des sources intégrées et export JSON
+sans clés. Accès privé et contrôle d’origine côté serveur.
+
+184 tests et build valides. Détails, fonctionnement et limites :
+[Administration](docs/ADMINISTRATION.md).
+
+---
+
 ## Version 2026-10-19.5 — actualisation relançable
 
 Le bouton Actualiser restait désactivé pendant tous les lots de flux publics.
