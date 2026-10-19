@@ -153,7 +153,7 @@ test('Les guides filtrent les commandes par système et échappent le texte dans
 
 test('Les flux HTTP refusés libèrent leur connexion avant le lot suivant',async()=>{const mod=await import('../worker/index.js?feed-cancel-errors');let open=0,closed=0,peak=0;const original=globalThis.fetch;globalThis.fetch=async()=>{if(open>=6)throw Error('Cloudflare connection pool exhausted');open++;peak=Math.max(peak,open);return new Response(new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode('Forbidden'));},cancel(){open--;closed++;}}),{status:403});};try{for(let i=0;i<3;i++){const response=await mod.default.fetch(new Request('https://test/api/feed?continue=1'),{},{});assert.equal(response.status,200);await response.json();assert.equal(open,0);}assert.equal(closed,3*mod.FEED_BATCH_SIZE);assert.ok(peak<=4);}finally{globalThis.fetch=original;}});
 test('Un document trop volumineux annoncé libère aussi son corps sans le lire',async()=>{const mod=await import('../worker/index.js?feed-oversize-body');let cancelled=0;const original=globalThis.fetch;globalThis.fetch=async()=>new Response(new ReadableStream({cancel(){cancelled++;}}),{headers:{'Content-Length':'99999999'}});try{const response=await mod.default.fetch(new Request('https://test/api/feed'),{},{});const body=await response.json();assert.equal(cancelled,mod.FEED_BATCH_SIZE);assert.equal(body.sources.filter(s=>s.code==='response_too_large').length,mod.FEED_BATCH_SIZE);}finally{globalThis.fetch=original;}});
-test('Le premier instantané lit les articles conservés sans attendre ni télécharger de flux',async()=>{const mod=await import('../worker/index.js?feed-first-snapshot');const source=mod.SOURCES.find(s=>s.enabled);const article={id:'snapshot-article',sourceId:source.id,source:source.name,title:'Article public déjà conservé',summary:'Texte de formation',url:source.home,date:new Date().toISOString(),cves:[],references:[],score:30};const record={source:source.id,status:'ok',articles:[article],checkedAt:new Date(Date.now()-60000).toISOString()};const env={SOCIAL_STORE:{idFromName:n=>n,get:id=>({fetch:async request=>{const u=new URL(typeof request==='string'?request:request.url);if(u.pathname==='/security')return new Response('{"ok":true}');assert.equal(u.pathname,'/feeds');return new Response(JSON.stringify([record]));}})}};const original=globalThis.fetch;globalThis.fetch=async()=>{throw Error('External download forbidden');};try{const response=await mod.default.fetch(new Request('https://test/api/feed?snapshot=1'),env,{});assert.equal(response.status,200);const body=await response.json();assert.equal(body.cached,true);assert.equal(body.events[0].title,article.title);assert.equal(body.updatedAt,record.checkedAt);assert.equal(body.batchSize,4);}finally{globalThis.fetch=original;}});
+test('Le premier instantané lit les articles conservés sans attendre ni télécharger de flux',async()=>{const mod=await import('../worker/index.js?feed-first-snapshot');const source=mod.SOURCES.find(s=>s.enabled);const article={id:'snapshot-article',sourceId:source.id,source:source.name,title:'Article public déjà conservé',summary:'Texte de formation',url:source.home,date:new Date().toISOString(),cves:[],references:[],score:30};const record={source:source.id,status:'ok',articles:[article],checkedAt:new Date(Date.now()-60000).toISOString()};const env={SOCIAL_STORE:{idFromName:n=>n,get:id=>({fetch:async request=>{const u=new URL(typeof request==='string'?request:request.url);if(u.pathname==='/security')return new Response('{"ok":true}');if(u.pathname==='/admin')return new Response(JSON.stringify({config:{revision:0},sources:mod.SOURCES,journal:[]}));assert.equal(u.pathname,'/feeds');return new Response(JSON.stringify([record]));}})}};const original=globalThis.fetch;globalThis.fetch=async()=>{throw Error('External download forbidden');};try{const response=await mod.default.fetch(new Request('https://test/api/feed?snapshot=1'),env,{});assert.equal(response.status,200);const body=await response.json();assert.equal(body.cached,true);assert.equal(body.events[0].title,article.title);assert.equal(body.updatedAt,record.checkedAt);assert.equal(body.batchSize,4);}finally{globalThis.fetch=original;}});
 test('Un stockage qui ne répond jamais atteint son délai et les gardes de sécurité restent fermées',async()=>{const {withDeadline,securityAction}=await import('../worker/index.js');await assert.rejects(withDeadline(new Promise(()=>{}),5),e=>e.name==='TimeoutError');const env={SOCIAL_STORE:{idFromName:n=>n,get:()=>({fetch:async()=>new Response('failure',{status:503})})}};await assert.rejects(securityAction(env,{op:'rate',key:'test',limit:1,window:1000}),/Coordination de sécurité indisponible/);});
 
 test('Le cache et chaque lot sont affichés avant la fin et survivent à une panne du lot suivant',async()=>{const page=await(await worker.fetch(new Request('https://test/'),{},{})).text(),js=page.match(/<script[^>]*>([\s\S]*)<\/script>/)[1];const nodes=new Map(),sources=Array.from({length:8},(_,i)=>({id:'s'+i,enabled:true}));const article=i=>({id:'a'+i,url:'https://example.com/'+i,title:'Test '+i,sourceId:'s'+i,score:30,articles:[{id:'a'+i,url:'https://example.com/'+i,title:'Test '+i,sourceId:'s'+i,score:30}]});const state=(rows,pending,cached=false)=>({events:rows,sources:sources.map((s,i)=>({source:s.id,status:i<rows.length?'ok':'pending'})),pendingSources:pending,batchSize:4,mode:'live',cached,updatedAt:new Date().toISOString()});let calls=0,release,ready;const gate=new Promise(resolve=>release=resolve),started=new Promise(resolve=>ready=resolve),renders=[];let notice='';const ctx=vm.createContext({feedLoading:false,AbortController,sources,data:{events:[],sources:[]},view:'feed',xArticles:[],manualArticles:[],socialArticles:[],accessToken:'',socialLoading:false,mergeEvents:rows=>rows.map(a=>({...a,articles:[a]})),$:key=>{if(!nodes.has(key))nodes.set(key,{disabled:false,textContent:'',hidden:false});return nodes.get(key);},showNotice:s=>notice=s,startAutoTranslation(){},render(){renders.push(ctx.data.events.length);},fetch:async()=>{calls++;if(calls===1)return {ok:true,json:async()=>state([article(0)],8,true)};if(calls===2)return {ok:true,json:async()=>state([article(1)],4)};ready();await gate;return {ok:false,status:503,json:async()=>({error:'Lot indisponible'})};}});new vm.Script(js.slice(js.indexOf('function requestFailure('),js.indexOf('let privateEpoch='))+js.slice(js.indexOf('async function load('),js.indexOf('function demo(){'))).runInContext(ctx);const task=vm.runInContext('load()',ctx);await started;assert.deepEqual(renders,[1,2]);assert.equal(ctx.data.events.length,2);assert.equal(nodes.get('#refresh').disabled,false);release();await task;assert.equal(ctx.data.events.length,2);assert.equal(nodes.get('#refresh').disabled,false);assert.match(notice,/articles déjà reçus/);assert.ok(!notice.includes('Gemini'));});
@@ -278,7 +278,9 @@ test('L’interface explique le refus Access et ne demande plus un champ de code
 async function accessFallbackFixture(options={}){
  const {readFile}=await import('node:fs/promises'),fixture=await accessFixture(),{ACCESS_CONFIG}=await import('../worker/index.js');
  const fallback={issuer:ACCESS_CONFIG.issuer,fetchedAt:new Date(Date.now()-60000).toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),keys:[fixture.jwk],...options};
- const source=(await readFile(new URL('../worker/index.js',import.meta.url),'utf8')).replace("import {ACCESS_JWKS_FALLBACK} from './access-jwks.js';",'const ACCESS_JWKS_FALLBACK='+JSON.stringify(fallback)+';');
+ let source=(await readFile(new URL('../worker/index.js',import.meta.url),'utf8')).replace("import {ACCESS_JWKS_FALLBACK} from './access-jwks.js';",'const ACCESS_JWKS_FALLBACK='+JSON.stringify(fallback)+';');
+ source=source.replace("import {adminURL,mergedCatalog,validateAdminSource,adminOperation} from './admin.js';",(await readFile(new URL('../worker/admin.js',import.meta.url),'utf8')).replaceAll('export ',''));
+ source=source.replace("import {ADMIN_STYLE,ADMIN_HTML,ADMIN_SCRIPT} from './admin-ui.js';",(await readFile(new URL('../worker/admin-ui.js',import.meta.url),'utf8')).replaceAll('export ',''));
  const mod=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// '+crypto.randomUUID()).toString('base64'));
  return {fixture,mod};
 }
@@ -335,4 +337,84 @@ test('Annuler une actualisation annule aussi le transport et un corps JSON bloqu
  const ctx=vm.createContext({caller,setTimeout,clearTimeout,AbortController,DOMException,fetch:async(url,options)=>{transportSignal=options.signal;return {headers:new Headers({'Content-Type':'application/json'}),json:()=>new Promise(()=>{})};}});
  new vm.Script(js.slice(js.indexOf('let privateEpoch='),js.indexOf('function clearPrivateSession'))).runInContext(ctx);
  const task=vm.runInContext("fetch('/api/feed?continue=1',{signal:caller.signal,timeoutMs:1000}).then(r=>r.json())",ctx);await new Promise(r=>setTimeout(r,1));caller.abort();await assert.rejects(task,e=>e.name==='AbortError');assert.equal(transportSignal.aborted,true);
+});
+
+function adminFixture(){
+ const stores=new Map(),objects=new Map(),env={APP_ACCESS_TOKEN:'admin-fixture-owner-access-token'};
+ env.SOCIAL_STORE={idFromName:id=>id,get:id=>({fetch:async r=>{if(!stores.has(id))stores.set(id,memoryStore());if(!objects.has(id))objects.set(id,new (await import('../worker/index.js')).SocialStore({storage:stores.get(id)},env));return objects.get(id).fetch(typeof r==='string'?new Request(r):r);}})};
+ const request=(command,extra={})=>worker.fetch(new Request('https://test/api/admin',{method:command?'POST':'GET',headers:{Authorization:'Bearer '+env.APP_ACCESS_TOKEN,...(command?{Origin:'https://test','Content-Type':'application/json'}:{}),...extra.headers},...(command?{body:JSON.stringify(command)}:{})}),env,{});
+ return {env,stores,objects,request};
+}
+test('L’administration exige une session et refuse les écritures cross-origin',async()=>{
+ assert.equal((await worker.fetch(new Request('https://test/api/admin'),{},{})).status,401);
+ const f=adminFixture();assert.equal((await f.request({action:'pause',revision:0,target:'feedsPaused',value:true},{headers:{Origin:'https://other.example'}})).status,403);
+ assert.equal((await f.request({action:'pause',revision:0,target:'feedsPaused',value:true},{headers:{Authorization:'Bearer incorrect'}})).status,401);
+ assert.equal(f.stores.size,0);
+});
+test('Ajouter, modifier et supprimer une source persiste après recréation du stockage',async()=>{
+ const f=adminFixture(),source={id:'custom-admin',name:'Ma veille',url:'https://feeds.example.org/rss',home:'https://example.org/',language:'fr',enabled:true,intervalMinutes:30};
+ assert.equal((await f.request({action:'save',revision:0,source})).status,200);f.objects.clear();let data=await(await f.request()).json();assert.equal(data.sources.find(s=>s.id===source.id).intervalMinutes,30);assert.equal(data.revision,1);
+ assert.equal((await f.request({action:'save',revision:1,source:{...source,name:'Veille renommée',enabled:false}})).status,200);data=await(await f.request()).json();assert.equal(data.sources.find(s=>s.id===source.id).enabled,false);
+ assert.equal((await f.request({action:'delete',revision:2,id:source.id})).status,200);data=await(await f.request()).json();assert.ok(!data.sources.some(s=>s.id===source.id));assert.equal(data.journal.length,3);assert.equal(data.journal[0].action,'delete');
+});
+test('Deux onglets ne peuvent pas écraser une modification récente de source',async()=>{
+ const f=adminFixture();assert.equal((await f.request({action:'pause',revision:0,target:'feedsPaused',value:true})).status,200);
+ const r=await f.request({action:'pause',revision:0,target:'feedsPaused',value:false});assert.equal(r.status,409);assert.equal((await(await f.request()).json()).feedsPaused,true);
+});
+test('Les URL privées, credentials et identifiants dangereux sont refusés avant tout téléchargement',async()=>{
+ const {adminURL,validateAdminSource}=await import('../worker/admin.js');
+ for(const url of ['http://example.org/feed','https://127.0.0.1/feed','https://2130706433/','https://0x7f000001/','https://[::1]/','https://169.254.169.254/','https://worker.internal/rss','https://user:password@example.org/rss','https://example.org/rss?api_key=secret','https://example.org:444/rss'])assert.throws(()=>adminURL(url),/HTTPS/);
+ assert.equal(adminURL('https://example.org/feed?author=team'),'https://example.org/feed?author=team');
+ assert.throws(()=>validateAdminSource({id:'__proto__',name:'Test',url:'https://example.org/',enabled:true}));
+ const f=adminFixture();const r=await f.request({action:'save',revision:0,source:{name:'Local',url:'https://127.0.0.1/',enabled:true}});assert.equal(r.status,400);assert.equal((await(await f.request()).json()).revision,0);
+});
+test('Le test individuel conserve le code HTTP et l’étape sans appeler Bright Data ou Gemini',async()=>{
+ const f=adminFixture(),original=globalThis.fetch;let calls=0;
+ await f.request({action:'save',revision:0,source:{id:'custom-failure',name:'Flux en panne',url:'https://feeds.example.org/rss',enabled:true}});
+ globalThis.fetch=async url=>{calls++;assert.equal(String(url),'https://feeds.example.org/rss');return new Response('Blocked',{status:403});};
+ try{const r=await f.request({action:'test',id:'custom-failure'}),value=await r.json();assert.equal(r.status,200);assert.equal(value.result.code,403);assert.equal(value.result.stage,'download');const data=await(await f.request()).json();assert.equal(data.sources.find(s=>s.id==='custom-failure').probe.code,403);assert.equal(calls,1);assert.equal((await f.request({action:'test',id:'custom-failure'})).status,429);}finally{globalThis.fetch=original;}
+});
+test('Une nouvelle source administrée est collectée, conservée et relue dans un autre isolate',async()=>{
+ const mod=await import('../worker/index.js?admin-collect-isolate'),f=adminFixture(),original=globalThis.fetch;
+ await f.request({action:'save',revision:0,source:{id:'custom-live',name:'Veille active',url:'https://feeds.example.org/rss',enabled:true,intervalMinutes:10}});
+ const store=f.stores.get('cyberveille-social-v1'),config=await store.get('admin:config');for(const source of SOURCES)config.overrides[source.id]={...source,enabled:false};await store.put('admin:config',config);
+ globalThis.fetch=async url=>{assert.equal(String(url),'https://feeds.example.org/rss');return new Response(xml);};
+ try{const r=await mod.default.fetch(new Request('https://test/api/feed?continue=1'),f.env,{}),data=await r.json();assert.equal(r.status,200);assert.equal(data.events.length,1);assert.equal(data.events[0].sourceId,'custom-live');assert.ok((await store.get('feed:custom-live')).articles.length);
+ const other=await import('../worker/index.js?admin-rehydrated');const snapshot=await(await other.default.fetch(new Request('https://test/api/feed?snapshot=1'),f.env,{})).json();assert.equal(snapshot.events[0].sourceId,'custom-live');assert.ok(snapshot.catalog.some(s=>s.id==='custom-live'));
+ await f.request({action:'delete',revision:1,id:'custom-live'});const deleted=await(await other.default.fetch(new Request('https://test/api/feed?snapshot=1'),f.env,{})).json();assert.equal(deleted.events.length,0);
+ }finally{globalThis.fetch=original;}
+});
+test('La pause des flux sert le cache sans appel externe et la pause sociale interdit de nouveaux lancements',async()=>{
+ const f=adminFixture(),original=globalThis.fetch;
+ await f.request({action:'pause',revision:0,target:'feedsPaused',value:true});await f.request({action:'pause',revision:1,target:'socialPaused',value:true});f.env.BRIGHTDATA_TOKEN='fixture';f.env.BRIGHTDATA_FREE_ONLY_CONFIRMED='true';let calls=0;globalThis.fetch=async()=>{calls++;throw Error('Interdit');};
+ try{const r=await worker.fetch(new Request('https://test/api/feed?continue=1'),f.env,{}),data=await r.json();assert.equal(r.status,200);assert.equal(data.paused,true);const obj=f.objects.get('cyberveille-social-v1');await obj.fetch(new Request('https://internal/tick'));assert.equal(calls,0);const state=await obj.state();assert.equal(state.budget.used,0);}finally{globalThis.fetch=original;}
+});
+test('Le diagnostic admin n’expose aucun secret et ne lance aucune collecte',async()=>{
+ const f=adminFixture(),original=globalThis.fetch;f.env.GEMINI_API_KEY='private-gemini-fixture';f.env.BRIGHTDATA_TOKEN='private-brightdata-fixture';globalThis.fetch=async()=>{throw Error('Aucun appel externe autorisé');};
+ try{const r=await f.request();assert.equal(r.status,200);const raw=await r.text();for(const value of [f.env.APP_ACCESS_TOKEN,f.env.GEMINI_API_KEY,f.env.BRIGHTDATA_TOKEN])assert.ok(!raw.includes(value));const v=JSON.parse(raw);assert.equal(v.services.brightdata.configured,true);assert.equal(v.services.gemini.configured,true);assert.ok(Array.isArray(v.sources));}finally{globalThis.fetch=original;}
+});
+test('Supprimer puis restaurer une source initiale conserve son identifiant',async()=>{
+ const f=adminFixture();await f.request({action:'delete',revision:0,id:'zataz'});assert.ok(!(await(await f.request()).json()).sources.some(s=>s.id==='zataz'));
+ await f.request({action:'restore',revision:1,id:'zataz'});assert.ok((await(await f.request()).json()).sources.some(s=>s.id==='zataz'));
+});
+test('L’interface Administration est accessible et échappe les contenus des sources',async()=>{
+ const {ADMIN_SCRIPT}=await import('../worker/admin-ui.js'),nodes=new Map();const ctx=vm.createContext({sources:[],$:id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',style:{},addEventListener(){}});return nodes.get(id);},document:{querySelectorAll:()=>[]},esc:value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')});
+ new vm.Script(ADMIN_SCRIPT).runInContext(ctx);vm.runInContext(`adminState={sources:[{id:'custom-evil',name:'<img src=x onerror=alert(1)>',url:'https://example.org/',enabled:true,monitor:{},probe:null}],journal:[],configuration:{}};renderAdmin()`,ctx);
+ assert.ok(nodes.get('#admin-source-list').innerHTML.includes('&lt;img'));assert.ok(!nodes.get('#admin-source-list').innerHTML.includes('<img'));const page=await(await worker.fetch(new Request('https://test/'),{},{})).text();assert.ok(page.includes('id="admin-open"'));assert.ok(page.includes('aria-labelledby="admin-title"'));assert.ok(!page.includes('__ADMIN_'));
+});
+
+test('Deux écritures admin simultanées avec la même révision produisent un seul changement',async()=>{
+ const f=adminFixture(),results=await Promise.all([f.request({action:'pause',revision:0,target:'feedsPaused',value:true}),f.request({action:'pause',revision:0,target:'socialPaused',value:true})]);assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);const data=await(await f.request()).json();assert.equal(data.revision,1);assert.equal(data.journal.length,1);
+});
+test('Une adresse de flux modifiée invalide ses anciens résultats',async()=>{
+ const f=adminFixture(),source={id:'custom-replace',name:'Flux',url:'https://feeds.example.org/old',enabled:true};await f.request({action:'save',revision:0,source});const store=f.stores.get('cyberveille-social-v1');await store.put('feed:custom-replace',{source:'custom-replace',sourceUrl:source.url,articles:[{title:'Ancien résultat'}]});await f.request({action:'save',revision:1,source:{...source,url:'https://feeds.example.org/new'}});assert.equal(await store.get('feed:custom-replace'),undefined);
+ const obj=f.objects.get('cyberveille-social-v1');const stale=await obj.fetch(new Request('https://internal/feeds',{method:'POST',body:JSON.stringify([{source:'custom-replace',sourceUrl:source.url,articles:[]}])}));assert.equal(stale.status,400);
+});
+test('Une redirection de test vers une adresse privée est arrêtée sans seconde requête',async()=>{
+ const f=adminFixture(),original=globalThis.fetch;await f.request({action:'save',revision:0,source:{id:'custom-redirect',name:'Redirection',url:'https://feeds.example.org/rss',enabled:true}});let calls=0;globalThis.fetch=async()=>{calls++;return new Response(null,{status:302,headers:{Location:'https://169.254.169.254/'}});};
+ try{const value=await(await f.request({action:'test',id:'custom-redirect'})).json();assert.equal(value.result.code,'redirect_blocked');assert.equal(calls,1);}finally{globalThis.fetch=original;}
+});
+test('Un test de flux HTML sans article identifie l’étape d’analyse',async()=>{
+ const f=adminFixture(),original=globalThis.fetch;await f.request({action:'save',revision:0,source:{id:'custom-html',name:'HTML',url:'https://feeds.example.org/page',enabled:true}});globalThis.fetch=async()=>new Response('<html><p>Ce n’est pas un flux.</p></html>');
+ try{const value=await(await f.request({action:'test',id:'custom-html'})).json();assert.equal(value.result.stage,'parse');assert.equal(value.result.code,'empty_feed');}finally{globalThis.fetch=original;}
 });
