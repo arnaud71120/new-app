@@ -585,10 +585,10 @@ async function adminRequest(request,env){
  let input;try{input=JSON.parse(await limitedText(request,40000));if(!input||typeof input!=='object')throw Error();}catch{return json({error:'Commande invalide'},400);}
  if(role!=='admin'&&!['test','save','delete','restore','import'].includes(input.action))return json({error:'Cette action exige le rôle administrateur.'},403);input.actor=(await userIdentity(request,env))?.email||'owner';
  if(input.action==='test'){
-  const {sources}=await sourceConfig(env);const source=sources.find(s=>s.id===input.id);if(!source?.url)return json({error:'Cette entrée n’est pas un flux testable.'},400);
+  const {config,sources}=await sourceConfig(env);const source=sources.find(s=>s.id===input.id);if(!source?.url)return json({error:'Cette entrée n’est pas un flux testable.'},400);
   try{adminURL(source.url);}catch(e){return json({error:e.message},400);}
   const lease=await securityAction(env,{op:'lease',key:'admin-test:'+source.id,id:crypto.randomUUID(),ttl:60000});if(!lease.ok)return json({error:'Un test vient d’être lancé. Attendez une minute.'},429);
-  const result=await adminProbe(source,env);const saved=await stub.fetch(new Request('https://internal/admin-result',{method:'POST',body:JSON.stringify(result)}));if(!saved.ok){await saved.body?.cancel();return json({error:'Test effectué mais résultat non enregistré.'},503);}await saved.body?.cancel();return json({ok:true,result});
+  const result=await adminProbe(source,config.externalPaused?{...env,EXTERNAL_CALLS_PAUSED:'true'}:env);const saved=await stub.fetch(new Request('https://internal/admin-result',{method:'POST',body:JSON.stringify(result)}));if(!saved.ok){await saved.body?.cancel();return json({error:'Test effectué mais résultat non enregistré.'},503);}await saved.body?.cancel();return json({ok:true,result});
  }
  const r=await stub.fetch(new Request('https://internal/admin',{method:'POST',body:JSON.stringify(input)}));const value=await r.json();if(r.ok&&input.id)feedRecords.delete(input.id);if(r.ok&&input.source?.id)feedRecords.delete(input.source.id);return json(value,r.status);
 }
