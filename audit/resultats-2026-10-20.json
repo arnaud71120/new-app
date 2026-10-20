@@ -1,0 +1,63 @@
+{
+  "reviewDate": "2026-10-20",
+  "network": "simulated",
+  "sourceCount": 62,
+  "enabledSources": 58,
+  "urlValidation": [
+    {
+      "url": "https://localhost./",
+      "accepted": true
+    },
+    {
+      "url": "https://service.internal./rss",
+      "accepted": true
+    }
+  ],
+  "duplicateImport": {
+    "reported": 2,
+    "stored": 1
+  },
+  "reposts": {
+    "acceptedDespiteProviderFlag": 1
+  },
+  "nvdCvssV4": {
+    "criticalV4OnlyAccepted": 0
+  },
+  "runtimePause": {
+    "status": 200,
+    "externalFetchesDespitePause": 4
+  },
+  "page": {
+    "bytes": 939902,
+    "gzipEstimateBytes": 158757,
+    "inlineScriptBytes": 898716
+  },
+  "accessibleLabels": [
+    {
+      "id": "search",
+      "hasExplicitLabel": false,
+      "hasAriaLabel": true
+    },
+    {
+      "id": "sort",
+      "hasExplicitLabel": false,
+      "hasAriaLabel": true
+    },
+    {
+      "id": "translate-provider",
+      "hasExplicitLabel": false,
+      "hasAriaLabel": true
+    }
+  ],
+  "socialBudget": {
+    "xProfiles": 10,
+    "linkedinProfiles": 10,
+    "reservation31Days": 4030,
+    "applicationCap": 4000
+  },
+  "nonAtomicAdminWrite": {
+    "operationFailed": true,
+    "persistedRevision": 1,
+    "feedsPaused": true
+  }
+}
