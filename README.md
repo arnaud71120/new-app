@@ -1,3 +1,13 @@
+## Revue complète — 20 octobre 2026
+
+[Rapport détaillé, priorités et feuille de route](docs/REVUE-COMPLETE-2026-10-20.md) :
+20 constats et améliorations, 14 fonctionnalités proposées, 184 tests existants
+validés et reproductions locales. Le rapport distingue les défauts confirmés,
+les limites fonctionnelles et les vérifications encore nécessaires en production.
+[Backlog CSV](audit/BACKLOG-2026-10-20.csv).
+
+---
+
 ## Version 2026-10-19.6 — Administration
 
 Bouton **⚙ Administration** à côté d’Actualiser : catalogue persistant de

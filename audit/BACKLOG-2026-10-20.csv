@@ -1,0 +1,35 @@
+id,priorite,domaine,action,preuve,effort_relatif,critere_acceptation
+R01,P0,Accès,Supprimer la dépendance au secours JWKS,Confirmé production et code,M,Validation distante et rotation testées avant le 26 octobre
+R02,P1,Collecte,Respecter l’arrêt global des appels externes,Reproduit localement,S,Aucun fetch externe sur les routes en pause
+R03,P1,Collecte,Compter nouveaux posts doublons et fraîcheur,Reproduit localement,M,Deux doublons donnent un seul ajout et un doublon
+R04,P1,Collecte,Valider les filtres Bright Data en production,À vérifier sur fournisseur réel,M,Recette X et LinkedIn avec dates et quota
+R05,P1,Collecte,Normaliser is_repost et variantes,Reproduit localement,S,Republications traitées selon le choix produit
+R06,P1,Sécurité,Canonicaliser les noms DNS avant validation,Reproduit localement,S,localhost. refusé avant réseau
+R07,P1,Administration,Écritures atomiques configuration journal cache,Reproduit localement,M,Panne simulée sans modification partielle
+R08,P1,Sécurité,Séparer lecteurs et administrateurs avant partage,Constat code; risque selon audience,M,Lecteur refusé sur écritures admin
+R09,P1,Budget,Prévision sociale compatible avec 4000 résultats,Calcul confirmé,M,Mois de 31 jours sans dépassement ni arrêt surprise
+R10,P1,Données,Conserver des favoris durables,Constat de code,M,Favori encore visible après sortie du fil
+R11,P1,Observabilité,Historique structuré des exécutions,Fonction à ajouter,M,Panne passée explicable depuis administration
+R12,P2,Collecte,Planification RSS site fermé,Évolution facultative,L,Sources à échéance traitées site fermé
+R13,P2,Couverture,Pagination NVD et CVSS v4,Limite code; v4 reproduit,M,Jeux multi-pages et scores v4 traités
+R14,P2,Performance,Chargement différé et pagination du fil,Mesure locale,L,Réduction mesurée du chargement mobile
+R15,P2,Architecture,Modulariser API client données et build,Constat de code,L,Contrats et parcours préservés
+R16,P2,Tests,Recette Workers et tests navigateur,Lacune de validation,M,Parcours de bout en bout en préproduction
+R17,P2,Données,Sauvegarde import restauration corbeille,Limite fonctionnelle,M,Export/import et retour arrière validés
+R18,P2,Stockage,Paginer nettoyage des clés de sécurité,Constat de code,S,Plus de mille clés expirées nettoyées
+R19,P2,Stockage,Rétention effective et archive exportable,Limite et calcul,M,Capacité et politique de purge visibles
+R20,P2,Horaires,Unifier les échéances et motifs de retard,Amélioration fonctionnelle,M,État cohérent entre fil admin et diagnostic
+F01,P2,Fonctionnalité,Centre d’incidents et journal des collectes,Proposition,M,Reconstituer les étapes d’une collecte passée
+F02,P2,Fonctionnalité,Alertes de fraîcheur et de panne,Proposition,M,Seuils par source et canaux explicitement activés
+F03,P2,Fonctionnalité,Surveillance CVE produits et mots-clés,Proposition,M,Correspondance privée expliquée dans le fil
+F04,P2,Fonctionnalité,Non-lus notes tags et favoris durables,Proposition,M,Informations retrouvables hors du fil courant
+F05,P2,Fonctionnalité,Briefing quotidien exportable,Proposition,M,Synthèse traçable possible sans IA
+F06,P2,Fonctionnalité,Import OPML et JSON de sources,Proposition,M,Prévisualisation validation et dédoublonnage
+F07,P3,Fonctionnalité,Gestion des profils sociaux suivis,Proposition,M/L,Budget recalculé avant enregistrement
+F08,P2,Fonctionnalité,Sauvegardes versionnées et corbeille,Proposition,M,Restauration testée avec révisions
+F09,P3,Fonctionnalité,Dossiers avec chronologie et provenance,Proposition,L,Copies distinguées des confirmations indépendantes
+F10,P2,Fonctionnalité,Tableau de couverture par source et profil,Proposition,M,Retards et collectes partielles visibles
+F11,P3,Fonctionnalité,Lecture mobile et cache hors ligne choisi,Proposition,M/L,Cache privé contrôlé à la déconnexion
+F12,P3,Fonctionnalité,Synchronisation entre appareils,Proposition,L,Données isolées par utilisateur et exportables
+F13,P2,Fonctionnalité,Rôles lecteur éditeur administrateur,Proposition,M/L,Permissions vérifiées côté serveur
+F14,P2,Fonctionnalité,Préproduction et retour de version,Proposition,M,Secrets isolés et procédure de retour validée
