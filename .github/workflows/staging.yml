@@ -1,0 +1,49 @@
+name: Préproduction et retour de version
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Action
+        type: choice
+        options: [deploy-staging, rollback-production]
+        default: deploy-staging
+      version_id:
+        description: Identifiant Cloudflare de la version précédente (retour uniquement)
+        type: string
+permissions:
+  contents: read
+jobs:
+  staging:
+    if: inputs.action == 'deploy-staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test && npm run build && npm run test:runtime
+      - run: npx wrangler deploy --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  rollback:
+    if: inputs.action == 'rollback-production'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - name: Revenir à une version identifiée
+        env:
+          VERSION_ID: ${{ inputs.version_id }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$VERSION_ID"
+          npx wrangler rollback "$VERSION_ID" --yes

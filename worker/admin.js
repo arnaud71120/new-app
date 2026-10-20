@@ -2,7 +2,7 @@
 export function adminURL(value){
  if(typeof value!=='string'||value.length>2048)throw Error('Adresse HTTPS invalide.');
  let u;try{u=new URL(value);}catch{throw Error('Adresse HTTPS invalide.');}
- const h=u.hostname.toLowerCase();
+ u.hostname=u.hostname.toLowerCase().replace(/\.+$/,'');const h=u.hostname;
  if(u.protocol!=='https:'||u.username||u.password||u.port&&u.port!=='443'||!h.includes('.')||h.includes(':')||/^\d+\.\d+\.\d+\.\d+$/.test(h)||/(?:^|\.)(localhost|local|internal|lan|home|test|invalid|example)$/.test(h)||[...u.searchParams.keys()].some(k=>/^(?:access_token|token|secret|password|api[_-]?key|authorization|auth)$/i.test(k)))throw Error('Utilisez une adresse HTTPS publique, sans identifiant ni clé.');
  u.hash='';return u.href;
 }
@@ -20,7 +20,13 @@ export function validateAdminSource(input,base){
  return {...(base||{}),id,name:input.name.trim(),url,home,language,enabled:input.enabled,intervalMinutes,role:String(input.role||base?.role||'Source administrée').slice(0,200),country:String(input.country||base?.country||'International').slice(0,40),...(base?.kind?{kind:base.kind}:{})};
 }
 export async function adminOperation(storage,base,input){
- const config=await storage.get('admin:config')||{revision:0,overrides:{},deleted:[],feedsPaused:false,socialPaused:false};
+ if(input.action==='read')return adminApply(storage,base,input);
+ if(typeof storage.transaction!=='function')throw Error('Stockage transactionnel requis.');
+ return storage.transaction(tx=>adminApply(tx,base,input));
+}
+async function adminApply(storage,base,input){
+ const config=await storage.get('admin:config')||{revision:0,overrides:{},deleted:[],feedsPaused:false,socialPaused:false,roles:{},profiles:[],backups:[]};
+ config.roles??={};config.profiles??=[];config.trash??={};config.rssScheduled??=true;
  if(input.action==='read')return {config,sources:mergedCatalog(base,config),journal:await storage.get('admin:journal')||[]};
  if(input.revision!==config.revision)return {error:'Configuration modifiée ailleurs. Rechargez avant d’enregistrer.',status:409};
  const catalog=mergedCatalog(base,config);let detail='',id=input.id;
@@ -31,17 +37,33 @@ export async function adminOperation(storage,base,input){
    if(!old&&catalog.length>=200)throw Error('Maximum de 200 sources atteint.');
    config.overrides={...config.overrides,[id]:source};config.deleted=config.deleted.filter(x=>x!==id);detail=source.name;
   }else if(input.action==='delete'){
-   const source=catalog.find(s=>s.id===id);if(!source)throw Error('Source introuvable.');config.deleted=[...new Set([...config.deleted,id])];delete config.overrides[id];detail=source.name;
+   const source=catalog.find(s=>s.id===id);if(!source)throw Error('Source introuvable.');config.trash[id]={source,deletedAt:new Date().toISOString()};config.deleted=[...new Set([...config.deleted,id])];delete config.overrides[id];detail=source.name;
   }else if(input.action==='restore'){
-   if(!base.some(s=>s.id===id))throw Error('Source initiale introuvable.');delete config.overrides[id];config.deleted=config.deleted.filter(x=>x!==id);detail='Configuration initiale restaurée';
+   const removed=config.trash[id]?.source;if(!base.some(s=>s.id===id)&&!removed)throw Error('Source initiale ou supprimée introuvable.');if(removed&&!base.some(s=>s.id===id))config.overrides[id]=removed;else delete config.overrides[id];delete config.trash[id];config.deleted=config.deleted.filter(x=>x!==id);detail='Configuration initiale restaurée';
+  }else if(input.action==='import'){
+   const rows=input.sources;if(!Array.isArray(rows)||!rows.length||rows.length>150)throw Error('Import limité à 150 sources.');
+   for(const row of rows){const source=validateAdminSource({...row,id:row.id||'custom-'+crypto.randomUUID(),enabled:row.enabled??true},catalog.find(s=>s.id===row.id));if(catalog.some(s=>s.url===source.url&&s.id!==source.id))continue;config.overrides[source.id]=source;config.deleted=config.deleted.filter(x=>x!==source.id);}
+   if(mergedCatalog(base,config).length>200)throw Error('Maximum de 200 sources atteint.');detail=rows.length+' sources examinées';
+  }else if(input.action==='restore-backup'){
+   const backup=await storage.get('admin:backup:'+input.backupId);if(!backup)throw Error('Sauvegarde introuvable.');for(const field of ['overrides','deleted','trash','feedsPaused','socialPaused','externalPaused','rssScheduled','profiles','profilesConfigured','socialSchedule'])if(backup.config[field]!==undefined)config[field]=backup.config[field];detail='Sauvegarde '+input.backupId+' restaurée';
+  }else if(input.action==='role'){
+   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email||'')||!['reader','editor','admin'].includes(input.role))throw Error('Identité ou rôle invalide.');config.roles[input.email.toLowerCase()]=input.role;detail=input.email+': '+input.role;
+  }else if(input.action==='schedule'){
+   if(typeof input.rssScheduled!=='boolean')throw Error('Planification invalide.');config.rssScheduled=input.rssScheduled;detail='Planification RSS '+(input.rssScheduled?'active':'inactive');
+  }else if(input.action==='profiles'){
+   if(!Array.isArray(input.profiles)||input.profiles.length>30)throw Error('Maximum de 30 profils.');
+   const seen=new Set();config.profilesConfigured=true;config.profiles=input.profiles.map(p=>{if(!p.name||String(p.name).length>120||typeof p.enabled!=='boolean')throw Error('Profil invalide.');if(p.x&&!/^[A-Za-z0-9_]{1,30}$/.test(p.x))throw Error('Identifiant X invalide.');if(p.linkedin){if(p.linkedin.length>500)throw Error('Adresse de profil trop longue.');const u=new URL(adminURL(p.linkedin));if(!/^(www\.)?linkedin\.com$/.test(u.hostname)||!/^\/in\/[^/]+\/?$/.test(u.pathname))throw Error('Profil LinkedIn invalide.');}const id=p.id||'profile-'+crypto.randomUUID();if(typeof id!=='string'||!/^[a-z0-9-]{1,80}$/.test(id)||['constructor','prototype','__proto__'].includes(id))throw Error('Identifiant de profil invalide');if(seen.has(id))throw Error('Profil dupliqué.');seen.add(id);return {id,name:String(p.name),x:p.x||null,linkedin:p.linkedin||null,enabled:p.enabled,priority:Math.max(0,Math.min(100,Number(p.priority)||0))};});
+   if(input.socialSchedule||config.socialSchedule){input.socialSchedule=input.socialSchedule||config.socialSchedule;for(const k of ['xHours','linkedinHours'])if(!Number.isInteger(input.socialSchedule[k])||input.socialSchedule[k]<6||input.socialSchedule[k]>168)throw Error('Intervalle social invalide.');const active=config.profiles.filter(p=>p.enabled),forecast=active.filter(p=>p.x).length*3*Math.ceil(744/input.socialSchedule.xHours)+active.filter(p=>p.linkedin).length*Math.ceil(744/input.socialSchedule.linkedinHours);if(forecast>4000)throw Error('Ce calendrier dépasse 4 000 résultats réservés par mois de 31 jours.');config.socialSchedule=input.socialSchedule;}detail=config.profiles.length+' profils enregistrés';
   }else if(input.action==='pause'){
-   if(!['feedsPaused','socialPaused'].includes(input.target)||typeof input.value!=='boolean')throw Error('Commande de pause invalide.');config[input.target]=input.value;detail=input.target+': '+(input.value?'pause':'reprise');
+   if(!['feedsPaused','socialPaused','externalPaused'].includes(input.target)||typeof input.value!=='boolean')throw Error('Commande de pause invalide.');config[input.target]=input.value;detail=input.target+': '+(input.value?'pause':'reprise');
   }else return {error:'Action inconnue.',status:400};
  }catch(e){return {error:e.message,status:400};}
  if(new TextEncoder().encode(JSON.stringify(config)).length>110000)return {error:'Configuration trop volumineuse. Réduisez les adresses ou le nombre de sources.',status:400};
+ const backupId=String(config.revision)+'-'+Date.now();const before=await storage.get('admin:config');if(before)await storage.put('admin:backup:'+backupId,{id:backupId,at:new Date().toISOString(),config:before});const backups=await storage.get('admin:backups')||[];if(before)backups.unshift({id:backupId,at:new Date().toISOString(),revision:before.revision});for(const old of backups.slice(20))await storage.delete('admin:backup:'+old.id);await storage.put('admin:backups',backups.slice(0,20));
  config.revision++;config.updatedAt=new Date().toISOString();
- const journal=await storage.get('admin:journal')||[];journal.unshift({at:config.updatedAt,action:input.action,sourceId:id||null,detail});
+ const journal=await storage.get('admin:journal')||[];journal.unshift({at:config.updatedAt,action:input.action,sourceId:id||null,actor:input.actor||'administrator',detail});
  await storage.put('admin:config',config);await storage.put('admin:journal',journal.slice(0,100));
+ if(['restore-backup','import'].includes(input.action)){for(const key of (await storage.list({prefix:'feed:',limit:200})).keys())await storage.delete(key);}
  if(id){await storage.delete('feed:'+id);await storage.delete('admin:probe:'+id);}
  return {ok:true,revision:config.revision};
 }

@@ -1,6 +1,6 @@
 {
   "name": "cyberveille-fr",
-  "main": "worker/index.js",
+  "main": "worker/runtime.js",
   "compatibility_date": "2026-09-01",
   "workers_dev": true,
   "durable_objects": {
@@ -28,5 +28,27 @@
   "vars": {
     "GEMINI_FREE_TIER_CONFIRMED": "true",
     "BRIGHTDATA_FREE_ONLY_CONFIRMED": "true"
+  },
+  "env": {
+    "staging": {
+      "name": "cyberveille-fr-staging",
+      "workers_dev": false,
+      "vars": {
+        "EXTERNAL_CALLS_PAUSED": "true",
+        "GEMINI_FREE_TIER_CONFIRMED": "false",
+        "BRIGHTDATA_FREE_ONLY_CONFIRMED": "false"
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "SOCIAL_STORE",
+            "class_name": "SocialStore"
+          }
+        ]
+      },
+      "triggers": {
+        "crons": []
+      }
+    }
   }
 }
