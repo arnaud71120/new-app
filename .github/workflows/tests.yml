@@ -22,7 +22,10 @@ jobs:
       - name: Installer Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
+
+      - name: Installer les dépendances verrouillées
+        run: npm ci
 
       - name: Verifier la syntaxe du Worker
         run: node --check worker/index.js
@@ -32,3 +35,12 @@ jobs:
 
       - name: Construire et valider le Worker
         run: npm run build
+
+      - name: Tester le runtime Cloudflare
+        run: npm run test:runtime
+
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Vérifier l’administration sur mobile
+        run: npm run test:browser

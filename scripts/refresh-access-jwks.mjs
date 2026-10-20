@@ -1,0 +1,7 @@
+import {writeFile} from 'node:fs/promises';
+const issuer='https://throbbing-silence-15e3.cloudflareaccess.com';
+let value,last;
+for(let attempt=0;attempt<3;attempt++){try{const r=await fetch(issuer+'/cdn-cgi/access/certs',{redirect:'error',signal:AbortSignal.timeout(15000),headers:{Accept:'application/json'}});if(!r.ok)throw Error('JWKS HTTP '+r.status);const text=await r.text();if(text.length>64000)throw Error('JWKS too large');const data=JSON.parse(text);if(!Array.isArray(data.keys)||!data.keys.length||data.keys.length>20)throw Error('JWKS schema invalid');const keys=data.keys.filter(k=>k.kty==='RSA'&&typeof k.kid==='string'&&/^[A-Za-z0-9_-]+$/.test(k.kid)&&typeof k.n==='string'&&/^[A-Za-z0-9_-]+$/.test(k.n)&&k.e==='AQAB'&&(!k.alg||k.alg==='RS256')&&(!k.use||k.use==='sig')).map(({kid,kty,n,e})=>({kid,kty,alg:'RS256',use:'sig',e,n}));if(!keys.length)throw Error('No valid RSA verification key');const now=Date.now();value={issuer,fetchedAt:new Date(now).toISOString(),expiresAt:new Date(now+7*86400000).toISOString(),keys};break;}catch(e){last=e;}}
+if(!value)throw last;
+await writeFile(new URL('../worker/access-jwks.js',import.meta.url),'// Public verification keys fetched over TLS from the pinned Access issuer.\n// Refreshed daily by the dedicated trusted workflow; bounded seven-day fallback.\nexport const ACCESS_JWKS_FALLBACK='+JSON.stringify(value,null,2)+';\n');
+console.log(JSON.stringify({issuer,keys:value.keys.length,expiresAt:value.expiresAt}));

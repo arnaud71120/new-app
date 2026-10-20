@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';import {existsSync} from 'node:fs';
+export default defineConfig({testDir:'./tests/browser',timeout:30000,workers:1,use:{baseURL:'http://localhost:4173',viewport:{width:390,height:844},launchOptions:{...(existsSync('/usr/bin/chromium')?{executablePath:'/usr/bin/chromium'}:{}),args:['--no-sandbox']}},webServer:{command:'node scripts/runtime-server.mjs --serve',url:'http://localhost:4173',reuseExistingServer:false}});

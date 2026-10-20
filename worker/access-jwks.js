@@ -1,9 +1,9 @@
-// Public Cloudflare Access verification keys fetched over TLS from the pinned issuer.
-// Bounded outage fallback; remote JWKS remains authoritative whenever available.
+// Public verification keys fetched over TLS from the pinned Access issuer.
+// Refreshed daily by the dedicated trusted workflow; bounded seven-day fallback.
 export const ACCESS_JWKS_FALLBACK={
   "issuer": "https://throbbing-silence-15e3.cloudflareaccess.com",
-  "fetchedAt": "2026-10-19T10:52:08Z",
-  "expiresAt": "2026-10-26T10:52:08Z",
+  "fetchedAt": "2026-10-20T21:14:05.914Z",
+  "expiresAt": "2026-10-27T21:14:05.914Z",
   "keys": [
     {
       "kid": "013468304bc5ebbfd75571d93272a488c1b8786b60797e50d9647884886fcb78",
