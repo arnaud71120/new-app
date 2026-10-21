@@ -7,3 +7,7 @@ self.addEventListener('fetch',event=>{const u=new URL(event.request.url);if(u.or
  if(u.pathname==='/assets/learning-2026-10-20.json')event.respondWith((async()=>{const cache=await caches.open(VERSION),saved=await cache.match(event.request);if(saved)return saved;return fetch(event.request);})());
 });
 self.addEventListener('message',event=>{if(event.data?.type==='clear-private')event.waitUntil(caches.delete(VERSION));});
+
+// The push carries no private payload; the signed-in app shows the details.
+self.addEventListener('push',event=>event.waitUntil(self.registration.showNotification('Cyberveille',{body:'De nouveaux éléments de veille vous attendent. Ouvrez Cyberveille pour les consulter.',tag:'cyberveille-server',data:{url:'/'}})));
+self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil((async()=>{for(const client of await self.clients.matchAll({type:'window',includeUncontrolled:true}))if(new URL(client.url).origin===self.location.origin){await client.focus();return;}await self.clients.openWindow('/');})());});

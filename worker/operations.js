@@ -11,7 +11,7 @@ export async function appendRuns(storage,rows){
 }
 export async function operationState(storage){
  const runs=[...(await storage.list({prefix:'run:',limit:200,reverse:true})).values()],times=runs.map(r=>r.durationMs).filter(Number.isFinite).sort((a,b)=>a-b);
- return {runs,backups:await storage.get('admin:backups')||[],heartbeat:await storage.get('ops:heartbeat')||null,metrics:{sample:runs.length,errors:runs.filter(r=>r.status==='error').length,p50:times.length?times[Math.floor((times.length-1)*.5)]:null,p95:times.length?times[Math.floor((times.length-1)*.95)]:null},retention:{runs:500,posts:800,postDays:60,backups:20}};
+ return {runs,push:await storage.get('push:last-run')||null,backups:await storage.get('admin:backups')||[],heartbeat:await storage.get('ops:heartbeat')||null,metrics:{sample:runs.length,errors:runs.filter(r=>r.status==='error').length,p50:times.length?times[Math.floor((times.length-1)*.5)]:null,p95:times.length?times[Math.floor((times.length-1)*.95)]:null},retention:{runs:500,posts:800,postDays:60,backups:20}};
 }
 export function sourceCoverage(sources,records,now=Date.now()){
  return sources.map(s=>{const r=records.find(r=>r.source===s.id),dates=(r?.articles||[]).map(a=>a.date).filter(x=>Number.isFinite(Date.parse(x))).sort(),latest=dates.at(-1)||null,threshold=(s.staleAfterHours||48)*3600000;

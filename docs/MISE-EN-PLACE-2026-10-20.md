@@ -61,7 +61,7 @@ Les données personnelles sont stockées par identité vérifiée, avec révisio
 
 ### Clés de vérification Access
 
-`scripts/refresh-access-jwks.mjs` n’accepte que l’émetteur officiel épinglé et ne récupère que des clés RSA publiques. Le workflow `access-keys.yml` renouvelle le secours quotidiennement et ne pousse que ce fichier après les tests. Vérifier la première exécution GitHub et la propagation du déploiement : en cas de panne du workflow ou du déploiement, le secours expire toujours après sept jours. Il ne remplace pas la résolution du problème réseau entre le Worker et le JWKS.
+`scripts/refresh-access-jwks.mjs` n’accepte que l’émetteur officiel épinglé et ne récupère que des clés RSA publiques. Le workflow `access-keys.yml` renouvelle le secours quotidiennement via une PR limitée à ce fichier, puis attend les vrais tests avant fusion. Voir [la correction du 21 octobre](CORRECTIONS-2026-10-21.md) et [le fonctionnement de la rotation](ACCESS-KEY-ROTATION.md). Vérifier la première exécution GitHub et la propagation du déploiement : en cas de panne du workflow ou du déploiement, le secours expire toujours après sept jours. Il ne remplace pas la résolution du problème réseau entre le Worker et le JWKS.
 
 ### Préproduction
 
