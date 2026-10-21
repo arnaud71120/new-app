@@ -1,17 +1,27 @@
 name: Renouveler les clés publiques Access
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/access-keys.yml'
+      - 'scripts/refresh-access-jwks.mjs'
   schedule:
     - cron: '17 4 * * *'
   workflow_dispatch:
 permissions:
   contents: write
+  pull-requests: write
+  actions: write
 concurrency:
   group: access-public-keys
   cancel-in-progress: false
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REFRESH_BRANCH: automation/access-public-keys
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,11 +35,110 @@ jobs:
         run: node scripts/refresh-access-jwks.mjs
       - run: npm test
       - run: npm run build
-      - name: Publier les seules clés publiques après validation
+      - name: Préparer une branche réservée aux clés publiques
+        id: branch
+        shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add worker/access-jwks.js
-          git diff --cached --quiet && exit 0
-          git commit -m "chore: refresh pinned Access public verification keys"
-          git push origin HEAD:main
+          set -euo pipefail
+          # Never overwrite somebody else's branch or include application changes.
+          changed_paths="$(git diff --name-only)"
+          if [[ "$changed_paths" != 'worker/access-jwks.js' ]]; then
+            echo '::error::Le renouvellement doit modifier uniquement worker/access-jwks.js.'
+            exit 1
+          fi
+          remote_sha="$(git ls-remote origin "refs/heads/$REFRESH_BRANCH" | cut -f1)"
+          if [[ -n "$remote_sha" ]]; then
+            author="$(gh api "repos/$GITHUB_REPOSITORY/commits/$remote_sha" --jq '.author.login')"
+            if [[ "$author" != 'github-actions[bot]' ]]; then
+              echo '::error::La branche de renouvellement contient un commit externe. Intervention requise ; aucune branche n’a été écrasée.'
+              exit 1
+            fi
+            changed_remote="$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$remote_sha" --jq '.files[].filename')"
+            if [[ -n "$changed_remote" && "$changed_remote" != 'worker/access-jwks.js' ]]; then
+              echo '::error::La branche de renouvellement contient autre chose que les clés publiques.'
+              exit 1
+            fi
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$REFRESH_BRANCH"
+          git add -- worker/access-jwks.js
+          git commit -m 'chore: refresh pinned Access public verification keys'
+          # A fixed branch prevents one new stale branch for every failed run.
+          # An explicit lease refuses any concurrent update to that branch.
+          git push "--force-with-lease=refs/heads/$REFRESH_BRANCH:$remote_sha" origin "HEAD:refs/heads/$REFRESH_BRANCH"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Ouvrir ou actualiser la demande de fusion
+        id: pull
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY%%/*}"
+          pulls="$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&base=main&head=$owner:$REFRESH_BRANCH")"
+          number="$(jq -r '.[0].number // empty' <<< "$pulls")"
+          if [[ -n "$number" ]]; then
+            author="$(jq -r '.[0].user.login' <<< "$pulls")"
+            if [[ "$author" != 'github-actions[bot]' ]]; then
+              echo '::error::Une PR externe utilise la branche réservée ; arrêt sans fusion.'
+              exit 1
+            fi
+          else
+            body_file="$(mktemp)"
+            cat > "$body_file" <<'BODY'
+          Renouvelle uniquement les clés publiques RSA provenant de l’émetteur Cloudflare Access épinglé, avec une fenêtre de secours limitée à sept jours.
+
+          La fusion attend le workflow réel `Tests obligatoires` sur le SHA de cette branche : tests unitaires, runtime Cloudflare et Chromium. Aucune vérification JWT ni protection de branche n’est désactivée.
+
+          Si la création automatique de PR est refusée, activer l’option GitHub « Allow GitHub Actions to create and approve pull requests ». Si une règle exige une approbation humaine, cette PR reste à approuver et ne sera pas contournée par le bot.
+          BODY
+            if ! gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$REFRESH_BRANCH" --title 'chore: renouveler les clés publiques Cloudflare Access' --body-file "$body_file"; then
+              echo '::error::Création de PR refusée. Vérifier Settings → Actions → General → Allow GitHub Actions to create and approve pull requests. Le secours existant reste borné à sa date d’expiration.'
+              exit 1
+            fi
+            number="$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&base=main&head=$owner:$REFRESH_BRANCH" --jq '.[0].number')"
+          fi
+          [[ "$number" =~ ^[0-9]+$ ]]
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+      - name: Déclencher explicitement les vrais tests de la branche
+        env:
+          EXPECTED_SHA: ${{ steps.branch.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # GITHUB_TOKEN-created pushes/PRs do not fire push/pull_request workflows.
+          # workflow_dispatch is the explicit supported exception, not a fake check.
+          if ! gh workflow run tests.yml --repo "$GITHUB_REPOSITORY" --ref "$REFRESH_BRANCH"; then
+            echo '::error::Déclenchement CI refusé. Vérifier que Actions est activé, tests.yml accepte workflow_dispatch et le jeton dispose de actions:write.'
+            exit 1
+          fi
+          run_id=''
+          for attempt in $(seq 1 24); do
+            run_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/tests.yml/runs?event=workflow_dispatch&branch=$REFRESH_BRANCH&per_page=20" --jq ".workflow_runs[] | select(.head_sha == \"$EXPECTED_SHA\") | .id" | head -1)"
+            [[ -n "$run_id" ]] && break
+            sleep 5
+          done
+          if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+            echo '::error::Aucune exécution CI correspondant au SHA demandé après deux minutes. La PR reste ouverte ; aucune fusion.'
+            exit 1
+          fi
+          gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status --interval 15
+          run="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id")"
+          jq -e --arg sha "$EXPECTED_SHA" '.head_sha == $sha and .event == "workflow_dispatch" and .path == ".github/workflows/tests.yml" and .conclusion == "success"' <<< "$run" > /dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" --jq '[.jobs[] | select(.name == "tests-obligatoires" and .conclusion == "success")] | length > 0' | grep -qx true
+      - name: Fusionner la PR validée sans contourner les protections
+        env:
+          EXPECTED_SHA: ${{ steps.branch.outputs.sha }}
+          PR_NUMBER: ${{ steps.pull.outputs.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # GitHub checks the expected head SHA and all branch protection rules.
+          if ! merged="$(gh api --method PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge" -f sha="$EXPECTED_SHA" -f merge_method=squash --jq '.merged')"; then
+            echo "::error::La PR #$PR_NUMBER ne peut pas être fusionnée automatiquement : une règle de protection ou une approbation manque. La PR reste ouverte ; aucun push direct vers main."
+            exit 1
+          fi
+          if [[ "$merged" != true ]]; then
+            echo "::error::GitHub n’a pas confirmé la fusion de la PR #$PR_NUMBER."
+            exit 1
+          fi
+          echo "Clés publiques fusionnées via la PR #$PR_NUMBER après réussite du vrai workflow de tests."
