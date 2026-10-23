@@ -1,6 +1,7 @@
 import {test,expect} from '@playwright/test';
 
 const json=(route,value,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(value)});
+const completed=(route,result)=>json(route,{jobId:route.request().postDataJSON().requestId,status:'complete',stage:'complete',result});
 
 async function sessionFixture(page,explain){
  const errors=[],unexpected=[],calls=[];page.on('pageerror',error=>errors.push(error.message));
@@ -19,7 +20,7 @@ async function sessionFixture(page,explain){
   if(path==='/api/feed')return json(route,{events:[],sources:[],mode:'live',pendingSources:0,totalSources:0,updatedAt:new Date().toISOString()});
   if(path==='/api/social'||path==='/api/social/auto')return json(route,{articles:[],configured:false,freeOnlyConfirmed:false,storage:true,platforms:{}});
   if(path==='/api/user')return json(route,{revision:0,bookmarks:{},notes:{},read:[],watchlist:[],progress:[],preferences:{},cases:{},alerts:[]});
-  if(path==='/api/explain')return explain(route,calls.filter(call=>call.path==='/api/explain').length);
+  if(path==='/api/analysis')return explain(route,calls.filter(call=>call.path==='/api/analysis').length);
   unexpected.push(path);return json(route,{error:'Unexpected route in browser regression fixture'},500);
  });
  await page.goto('/');
@@ -38,15 +39,15 @@ for(const status of [503,403])test('Une page HTML HTTP '+status+' ne devient pas
  const message=await page.locator('#ai-result').innerText();expect(message).not.toMatch(/Session Cloudflare Access expirée|rechargez cette page pour vous reconnecter/i);
  if(status===503)expect(message).toContain('indisponible');else expect(message).toMatch(/refus|blocage|bloqu/i);
  await expect(page.locator('#explain')).toBeEnabled();
- expect(fixture.calls.filter(call=>call.path==='/api/explain')).toHaveLength(1);
+ expect(fixture.calls.filter(call=>call.path==='/api/analysis')).toHaveLength(1);
  expect(fixture.errors).toEqual([]);expect(fixture.unexpected).toEqual([]);
 });
 
 test('La connexion Access utilise le cookie, sans faux jeton Bearer sur le réseau',async({page})=>{
- const fixture=await sessionFixture(page,route=>json(route,{text:'Analyse de test reçue.',model:'gemini-fixture'}));
+ const fixture=await sessionFixture(page,route=>completed(route,{text:'Analyse de test reçue.',model:'gemini-fixture'}));
  await page.locator('#explain').click();await expect(page.locator('#ai-result')).toContainText('Analyse de test reçue.');
- const outgoing=fixture.calls.filter(call=>['/api/session','/api/explain','/api/user','/api/social/auto'].includes(call.path));
- expect(outgoing.some(call=>call.path==='/api/session')).toBe(true);expect(outgoing.some(call=>call.path==='/api/explain')).toBe(true);
+ const outgoing=fixture.calls.filter(call=>['/api/session','/api/analysis','/api/user','/api/social/auto'].includes(call.path));
+ expect(outgoing.some(call=>call.path==='/api/session')).toBe(true);expect(outgoing.some(call=>call.path==='/api/analysis')).toBe(true);
  for(const call of outgoing){expect(call.headers.authorization).toBeUndefined();expect(call.headers.cookie).toContain('CF_Authorization=browser-cookie-fixture');}
  const networkOptions=await page.evaluate(()=>window.__networkOptions.filter(item=>item.url.startsWith('/api/')));
  expect(networkOptions.length).toBeGreaterThan(0);for(const options of networkOptions){expect(options.credentials).toBe('same-origin');expect(options.authorization).toBeNull();}
@@ -54,23 +55,23 @@ test('La connexion Access utilise le cookie, sans faux jeton Bearer sur le rése
 });
 
 for(const mode of ['html-login','json-401'])test('Reconnexion '+mode+' sans rejeu automatique d’une demande Gemini',async({page})=>{
- const fixture=await sessionFixture(page,(route,count)=>count===1?(mode==='html-login'?route.fulfill({status:200,contentType:'text/html',body:'<html><title>Cloudflare Access</title><form action="https://team.cloudflareaccess.com/cdn-cgi/access/login/application">Sign in with your email</form></html>'}):json(route,{error:'Une nouvelle connexion est nécessaire.',code:'access_expired'},401)):json(route,{text:'Analyse après nouvelle action explicite.',model:'gemini-fixture'}));
+ const fixture=await sessionFixture(page,(route,count)=>count===1?(mode==='html-login'?route.fulfill({status:200,contentType:'text/html',body:'<html><title>Cloudflare Access</title><form action="https://team.cloudflareaccess.com/cdn-cgi/access/login/application">Sign in with your email</form></html>'}):json(route,{error:'Une nouvelle connexion est nécessaire.',code:'access_expired'},401)):completed(route,{text:'Analyse après nouvelle action explicite.',model:'gemini-fixture'}));
  await page.locator('#explain').click();await expect(page.locator('#ai-result')).toContainText('connexion');
  const reconnect=page.locator('#ai-result [data-reconnect]');await expect(reconnect).toBeVisible();await reconnect.click();
  await expect(page.locator('#ai-result')).toContainText(/connexion.*(?:valid|vérifi|rétabli)|session.*valid/i);
- expect(fixture.calls.filter(call=>call.path==='/api/explain')).toHaveLength(1);
+ expect(fixture.calls.filter(call=>call.path==='/api/analysis')).toHaveLength(1);
  await expect(page.locator('#explain')).toBeEnabled();await page.locator('#explain').click();
  await expect(page.locator('#ai-result')).toContainText('Analyse après nouvelle action explicite.');
- expect(fixture.calls.filter(call=>call.path==='/api/explain')).toHaveLength(2);
+ expect(fixture.calls.filter(call=>call.path==='/api/analysis')).toHaveLength(2);
  expect(fixture.errors).toEqual([]);expect(fixture.unexpected).toEqual([]);
 });
 
 
 test('Fermer la session Access ne transmet pas non plus le marqueur au logout',async({page})=>{
- const fixture=await sessionFixture(page,route=>json(route,{text:'Unused analysis fixture',model:'fixture'}));
+ const fixture=await sessionFixture(page,route=>completed(route,{text:'Unused analysis fixture',model:'fixture'}));
  const loggedOut=page.waitForRequest(request=>new URL(request.url()).pathname==='/api/logout');
  await page.evaluate(()=>clearPrivateSession());const request=await loggedOut;
  expect(request.headers().authorization).toBeUndefined();expect(request.headers().cookie).toContain('CF_Authorization=browser-cookie-fixture');
- await expect(page.locator('#detail')).not.toBeVisible();expect(fixture.calls.filter(call=>call.path==='/api/explain')).toHaveLength(0);
+ await expect(page.locator('#detail')).not.toBeVisible();expect(fixture.calls.filter(call=>call.path==='/api/analysis')).toHaveLength(0);
  expect(fixture.errors).toEqual([]);expect(fixture.unexpected).toEqual([]);
 });

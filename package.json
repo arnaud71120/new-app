@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/dev.mjs",
-    "test": "node --test scripts/test.mjs scripts/roadmap.test.mjs scripts/prioritization.test.mjs scripts/personal-fixes.test.mjs scripts/push.test.mjs",
+    "test": "node --test scripts/test.mjs scripts/roadmap.test.mjs scripts/prioritization.test.mjs scripts/personal-fixes.test.mjs scripts/push.test.mjs scripts/analysis-jobs.test.mjs scripts/analysis-input.test.mjs scripts/analysis-client.test.mjs",
     "build": "bash scripts/build.sh && node scripts/validate-artifact.mjs",
-    "test:runtime": "node --test --test-timeout=30000 scripts/runtime.test.mjs",
+    "test:runtime": "node --test --test-concurrency=1 --test-timeout=30000 scripts/runtime.test.mjs scripts/analysis-runtime.test.mjs",
     "test:browser": "playwright test"
   },
   "devDependencies": {
