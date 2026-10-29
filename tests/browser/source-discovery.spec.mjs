@@ -118,3 +118,18 @@ test('Changer de site efface les anciens résultats vérifiés et impose le choi
  await query.fill('gamma');await expect(options(page)).toHaveCount(1);await options(page).first().click();
  const choice=page.locator('#admin-feed-choice');await expect(choice).toBeVisible();await expect(choice.locator('option')).toHaveCount(3);await expect(choice).toHaveValue('');await expect(feed).toHaveValue('');await choice.selectOption(thirdFeeds[1]);await expect(feed).toHaveValue(thirdFeeds[1]);
 });
+
+test('Une vérification différée ne remplace pas une adresse de flux saisie manuellement entre-temps',async({page})=>{
+ const site='https://www.pending-alpha-fixture.fr/',oldFeed=site+'feed/',manualFeed='https://www.manual-beta-fixture.fr/rss.xml';
+ let verificationRoute,markVerificationStarted;const verificationStarted=new Promise(resolve=>{markVerificationStarted=resolve;});
+ await page.route(searchURL,async route=>{
+  if(route.request().method()==='POST'){verificationRoute=route;markVerificationStarted();return;}
+  await route.fulfill({json:{status:'ok',results:[candidate('site','Site Alpha différé',site)]}});
+ });
+ await enterAdmin(page);await openAdder(page);await page.locator('#admin-source-query').fill('alpha différé');await expect(options(page)).toHaveCount(1);await options(page).first().click();await verificationStarted;
+ const feed=page.locator('#admin-url'),verification=page.locator('#admin-source-verification');
+ await feed.fill(manualFeed);
+ await verificationRoute.fulfill({json:{status:'verified',httpStatus:200,name:'Site Alpha différé',url:site,home:site,feedUrl:oldFeed,feeds:[{url:oldFeed,verified:true}],message:'Ancien flux Alpha confirmé.'}}).catch(()=>{});
+ await page.waitForTimeout(150);
+ await expect(feed).toHaveValue(manualFeed);await expect(verification).not.toHaveAttribute('data-status','verified');await expect(verification).not.toContainText('Ancien flux Alpha confirmé');
+});

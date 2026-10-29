@@ -29,15 +29,37 @@ async function follow(url,b,allowed){
   if(!allowed(next))throw Object.assign(Error('Redirection vers un autre site refusée.'),{code:'unsafe_redirect',httpStatus:response.status});current=next;
  }
 }
-function xmlFeed(body){
+function xmlNodes(xml){
+ // Mask comments/CDATA/prologs without changing offsets into the original text.
+ const masked=xml.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>/g,value=>(value.startsWith('<![CDATA[')?'C':' ')+ ' '.repeat(value.length-1));
+ const tokens=/<\/?[a-z_][\w:.-]*(?:\s+[a-z_][\w:.-]*\s*=\s*(?:"[^"]*"|'[^']*'))*\s*\/?>/gi,stack=[],nodes=[];let offset=0,roots=0;
+ for(const match of masked.matchAll(tokens)){
+  const between=masked.slice(offset,match.index);if(between.includes('<')||!stack.length&&between.trim())return null;
+  const closing=match[0].startsWith('</'),tag=match[0].match(/^<\/?([\w:.-]+)/)[1];
+  if(closing){if(!/^<\/[\w:.-]+\s*>$/.test(match[0])||stack.at(-1)?.tag!==tag)return null;const node=stack.pop();nodes.push({...node,closeStart:match.index,end:match.index+match[0].length});}
+  else{if(!stack.length&&++roots>1)return null;const node={tag,start:match.index,openEnd:match.index+match[0].length,parentStart:stack.at(-1)?.start??null,attributes:attrs(xml.slice(match.index,match.index+match[0].length))};if(/\/\s*>$/.test(match[0]))nodes.push({...node,closeStart:node.openEnd,end:node.openEnd});else stack.push(node);}
+  offset=match.index+match[0].length;
+ }
+ if(stack.length||roots!==1||masked.slice(offset).trim())return null;return nodes;
+}
+const looksLikeFeed=body=>/^\s*(?:<\?[\s\S]*?\?>\s*|<!--[\s\S]*?-->\s*)*<(?:[\w.-]+:)?(?:rss|feed|RDF)\b/i.test(body.replace(/^\uFEFF/,''));
+function xmlFeed(body,baseURL){
  if(/<!DOCTYPE|<!ENTITY/i.test(body))return null;
- let xml=body.replace(/^\uFEFF/,'').trim();for(let i=0;i<8;i++){const next=xml.replace(/^(?:<\?[\s\S]*?\?>|<!--[\s\S]*?-->)\s*/,'');if(next===xml)break;xml=next;}
- const root=xml.match(/^<((?:[a-z_][\w.-]*:)?(?:rss|feed|RDF))\b([^>]*)>/i);if(!root)return null;const tag=root[1],local=tag.split(':').at(-1).toLowerCase();
- if(!new RegExp('</'+tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*>\\s*(?:<!--[\\s\\S]*?-->\\s*)*$','i').test(xml))return null;
- if(local==='rss'&&!/<(?:[\w.-]+:)?channel\b/i.test(xml))return null;
- if(local==='feed'&&!/http:\/\/www\.w3\.org\/2005\/Atom/i.test(root[2]))return null;
- if(local==='rdf'&&!/http:\/\/purl\.org\/rss\/1\.0\//i.test(root[2]))return null;
- const count=[...xml.matchAll(/<(?:[\w.-]+:)?(?:item|entry)\b/gi)].length,name=clean(xml.match(/<(?:[\w.-]+:)?title\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?title\s*>/i)?.[1]||'Flux '+(local==='feed'?'Atom':'RSS'));
+ const xml=body.replace(/^\uFEFF/,'').trim(),nodes=xmlNodes(xml);if(!nodes)return null;
+ const byParent=new Map();for(const node of nodes){if(!byParent.has(node.parentStart))byParent.set(node.parentStart,[]);byParent.get(node.parentStart).push(node);}const childrenOf=node=>byParent.get(node.start)||[];
+ const root=nodes.find(node=>node.parentStart===null),local=root?.tag.split(':').at(-1).toLowerCase();if(!['rss','feed','rdf'].includes(local))return null;
+ const rootOpening=xml.slice(root.start,root.openEnd),channel=childrenOf(root).find(node=>node.tag.split(':').at(-1)==='channel');
+ if(local==='rss'&&!channel||local==='rdf'&&(!channel||!/http:\/\/purl\.org\/rss\/1\.0\//i.test(rootOpening))||local==='feed'&&!/http:\/\/www\.w3\.org\/2005\/Atom/i.test(rootOpening))return null;
+ const localName=node=>node.tag.split(':').at(-1),text=node=>clean(xml.slice(node.openEnd,node.closeStart));
+ const entries=childrenOf(local==='rss'?channel:root).filter(node=>localName(node)===(local==='feed'?'entry':'item'));
+ let count=0;for(const entry of entries){
+  const children=childrenOf(entry),title=children.find(node=>localName(node)==='title');if(!title||!text(title))continue;
+  const links=children.filter(node=>localName(node)==='link');
+  const usable=links.some(link=>{const rel=link.attributes.rel;if(rel&&!rel.toLowerCase().split(/\s+/).includes('alternate'))return false;const value=local==='feed'?link.attributes.href:text(link)||link.attributes.href;if(!value)return false;try{const url=new URL(value,baseURL);if(url.protocol!=='https:'||url.username||url.password||url.port)return false;publicSourceURL(url.href);return true;}catch{return false;}});
+  if(usable)count++;
+ }
+ if(entries.length&&!count)return null;
+ const title=childrenOf(channel||root).find(node=>localName(node)==='title'),name=title?text(title):'Flux '+(local==='feed'?'Atom':'RSS');
  return {name:name.slice(0,200),count};
 }
 function metadata(html){
@@ -84,8 +106,9 @@ export async function verifySource({platform,url,paused=false,fetcher=fetch,now=
  const b=budget(fetcher,now);try{
   const fetched=await follow(output.url,b,target=>platform==='site'?(sameSite(output.url,target)||knownFeedHost(output.url)&&knownFeedHost(target)):isSocialHost(platform,new URL(target).hostname)),response=fetched.response;output.httpStatus=response.status;
   if(!response.ok){await response.body?.cancel();output.status=response.status===404?'error':'unverified';output.message=httpMessage(response.status);return output;}
-  const body=await textBody(response,b),feed=platform==='site'?xmlFeed(body):null;
+  const body=await textBody(response,b),feed=platform==='site'?xmlFeed(body,fetched.url):null;
   if(feed){Object.assign(output,{status:'verified',name:feed.name,home:new URL(fetched.url).origin+'/',feedUrl:fetched.url,feeds:[{url:fetched.url,name:feed.name,verified:true}],message:feed.count?'Flux RSS/Atom reconnu ; '+feed.count+' publication(s) présente(s).':'Flux RSS/Atom reconnu, mais aucune publication n’est actuellement présente.'});return output;}
+  if(platform==='site'&&looksLikeFeed(body)){output.message='Le document ressemble à un flux RSS/Atom, mais sa structure ou ses publications ne sont pas exploitables. Aucun flux valide n’est confirmé.';return output;}
   const data=metadata(body);output.name=(data.meta['og:title']||data.title||new URL(output.url).hostname).slice(0,200);
   if(wall(fetched.url,body,data.title)){output.message='Une page de connexion ou une protection empêche la vérification publique. Le profil ou site n’est pas déclaré absent.';return output;}
   if(platform!=='site'){
@@ -98,7 +121,7 @@ export async function verifySource({platform,url,paused=false,fetcher=fetch,now=
   output.home=fetched.url;const candidates=[];
   for(const link of data.links){if(!link.rel?.toLowerCase().split(/\s+/).includes('alternate')||!/(?:rss|atom|rdf)\+xml/i.test(link.type||'')||!link.href)continue;try{const address=publicSourceURL(new URL(link.href,fetched.url).href);if((sameSite(output.url,address)||knownFeedHost(address))&&!candidates.some(item=>item.url===address))candidates.push({url:address,name:clean(link.title||'Flux annoncé')});}catch{}}
   const chosen=candidates.slice(0,3),feeds=Array(chosen.length);let index=0;
-  await Promise.all(Array.from({length:Math.min(2,chosen.length)},async()=>{while(index<chosen.length){const i=index++,candidate=chosen[i];feeds[i]={...candidate,verified:false};try{const checked=await follow(candidate.url,b,target=>sameSite(output.url,target)||knownFeedHost(target));if(!checked.response.ok){await checked.response.body?.cancel();continue;}const parsed=xmlFeed(await textBody(checked.response,b));if(parsed)feeds[i]={url:checked.url,name:parsed.name,verified:true,count:parsed.count};}catch{}}}));
+  await Promise.all(Array.from({length:Math.min(2,chosen.length)},async()=>{while(index<chosen.length){const i=index++,candidate=chosen[i];feeds[i]={...candidate,verified:false};try{const checked=await follow(candidate.url,b,target=>sameSite(output.url,target)||knownFeedHost(target));if(!checked.response.ok){await checked.response.body?.cancel();continue;}const parsed=xmlFeed(await textBody(checked.response,b),checked.url);if(parsed)feeds[i]={url:checked.url,name:parsed.name,verified:true,count:parsed.count};}catch{}}}));
   output.feeds=feeds.map(({count,...item})=>item);const selected=feeds.find(item=>item.verified);
   if(selected){output.status='verified';output.feedUrl=selected.url;output.message='Un flux RSS/Atom annoncé par ce site a été vérifié.'+(selected.count===0?' Il ne contient actuellement aucune publication.':'')+(b.signal.aborted?' Les autres flux n’ont pas tous pu être vérifiés dans le délai.':'');}else if(b.signal.aborted)output.message='La vérification a dépassé douze secondes ; résultat non confirmé.';else output.message=chosen.length?'Des flux sont annoncés, mais aucun n’a pu être confirmé comme RSS/Atom.':'Le site répond, mais aucun flux RSS/Atom vérifiable n’a été trouvé. Ajoutez une adresse de flux directe si vous la connaissez.';
  }catch(error){output.status='unverified';output.message=error.code==='timeout'?'La vérification a dépassé douze secondes ; résultat non confirmé.':error.code==='body_limit'?'La page dépasse la limite de lecture ; résultat non confirmé.':error.code==='unsafe_redirect'||error.code==='redirect_limit'?error.message:'Connexion impossible ou réponse illisible ; résultat non confirmé.';if(error.httpStatus)output.httpStatus=error.httpStatus;}finally{b.close();}return output;
