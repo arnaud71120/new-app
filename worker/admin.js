@@ -1,3 +1,4 @@
+import {normalizeSourceURL} from './source-addresses.js';
 // Persistent administration helpers. No credentials are accepted or returned.
 export function adminURL(value){
  if(typeof value!=='string'||value.length>2048)throw Error('Adresse HTTPS invalide.');
@@ -19,6 +20,21 @@ export function validateAdminSource(input,base){
  const language=String(input.language||base?.language||'fr');if(!/^[a-z]{2,3}$/.test(language))throw Error('Langue attendue : fr, en, etc.');
  return {...(base||{}),id,name:input.name.trim(),url,home,language,enabled:input.enabled,intervalMinutes,role:String(input.role||base?.role||'Source administrée').slice(0,200),country:String(input.country||base?.country||'International').slice(0,40),...(base?.kind?{kind:base.kind}:{})};
 }
+export function validateAdminProfiles(rows){
+ if(!Array.isArray(rows)||rows.length>30)throw Error('Maximum de 30 profils.');
+ const ids=new Set(),handles=new Set(),linkedin=new Set();
+ return rows.map(p=>{
+  if(!p||typeof p.name!=='string'||!p.name.trim()||p.name.length>120||typeof p.enabled!=='boolean')throw Error('Profil invalide.');
+  const id=p.id||'profile-'+crypto.randomUUID();if(typeof id!=='string'||!/^[a-z0-9-]{1,80}$/.test(id)||['constructor','prototype','__proto__'].includes(id))throw Error('Identifiant de profil invalide.');
+  if(ids.has(id))throw Error('Profil dupliqué.');ids.add(id);
+  const x=p.x?new URL(normalizeSourceURL('x',p.x)).pathname.slice(1):null;
+  const url=p.linkedin?normalizeSourceURL('linkedin',p.linkedin):null;
+  if(x&&handles.has(x))throw Error('Ce compte X figure déjà dans les profils.');
+  if(url&&linkedin.has(url.toLocaleLowerCase('fr')))throw Error('Ce compte LinkedIn figure déjà dans les profils.');
+  if(x)handles.add(x);if(url)linkedin.add(url.toLocaleLowerCase('fr'));
+  return {id,name:p.name.trim(),x,linkedin:url,enabled:p.enabled,priority:Math.max(0,Math.min(100,Number(p.priority)||0))};
+ });
+}
 export async function adminOperation(storage,base,input){
  if(input.action==='read')return adminApply(storage,base,input);
  if(typeof storage.transaction!=='function')throw Error('Stockage transactionnel requis.');
@@ -34,6 +50,7 @@ async function adminApply(storage,base,input){
   if(input.action==='save'){
    const old=catalog.find(s=>s.id===input.source?.id);if(input.source?.id&&!old&&!base.some(s=>s.id===input.source.id)&&!String(input.source.id).startsWith('custom-'))throw Error('Nouvelle source : identifiant custom requis.');
    const source=validateAdminSource(input.source,old||base.find(s=>s.id===input.source?.id));id=source.id;
+   if(catalog.some(s=>s.id!==id&&s.url===source.url))throw Error('Ce flux figure déjà dans le catalogue. Modifiez la source existante.');
    if(!old&&catalog.length>=200)throw Error('Maximum de 200 sources atteint.');
    config.overrides={...config.overrides,[id]:source};config.deleted=config.deleted.filter(x=>x!==id);detail=source.name;
   }else if(input.action==='delete'){
@@ -51,8 +68,7 @@ async function adminApply(storage,base,input){
   }else if(input.action==='schedule'){
    if(typeof input.rssScheduled!=='boolean')throw Error('Planification invalide.');config.rssScheduled=input.rssScheduled;detail='Planification RSS '+(input.rssScheduled?'active':'inactive');
   }else if(input.action==='profiles'){
-   if(!Array.isArray(input.profiles)||input.profiles.length>30)throw Error('Maximum de 30 profils.');
-   const seen=new Set();config.profilesConfigured=true;config.profiles=input.profiles.map(p=>{if(!p.name||String(p.name).length>120||typeof p.enabled!=='boolean')throw Error('Profil invalide.');if(p.x&&!/^[A-Za-z0-9_]{1,30}$/.test(p.x))throw Error('Identifiant X invalide.');if(p.linkedin){if(p.linkedin.length>500)throw Error('Adresse de profil trop longue.');const u=new URL(adminURL(p.linkedin));if(!/^(www\.)?linkedin\.com$/.test(u.hostname)||!/^\/in\/[^/]+\/?$/.test(u.pathname))throw Error('Profil LinkedIn invalide.');}const id=p.id||'profile-'+crypto.randomUUID();if(typeof id!=='string'||!/^[a-z0-9-]{1,80}$/.test(id)||['constructor','prototype','__proto__'].includes(id))throw Error('Identifiant de profil invalide');if(seen.has(id))throw Error('Profil dupliqué.');seen.add(id);return {id,name:String(p.name),x:p.x||null,linkedin:p.linkedin||null,enabled:p.enabled,priority:Math.max(0,Math.min(100,Number(p.priority)||0))};});
+   config.profiles=validateAdminProfiles(input.profiles);config.profilesConfigured=true;
    if(input.socialSchedule||config.socialSchedule){input.socialSchedule=input.socialSchedule||config.socialSchedule;for(const k of ['xHours','linkedinHours'])if(!Number.isInteger(input.socialSchedule[k])||input.socialSchedule[k]<6||input.socialSchedule[k]>168)throw Error('Intervalle social invalide.');const active=config.profiles.filter(p=>p.enabled),forecast=active.filter(p=>p.x).length*3*Math.ceil(744/input.socialSchedule.xHours)+active.filter(p=>p.linkedin).length*Math.ceil(744/input.socialSchedule.linkedinHours);if(forecast>4000)throw Error('Ce calendrier dépasse 4 000 résultats réservés par mois de 31 jours.');config.socialSchedule=input.socialSchedule;}detail=config.profiles.length+' profils enregistrés';
   }else if(input.action==='pause'){
    if(!['feedsPaused','socialPaused','externalPaused'].includes(input.target)||typeof input.value!=='boolean')throw Error('Commande de pause invalide.');config[input.target]=input.value;detail=input.target+': '+(input.value?'pause':'reprise');

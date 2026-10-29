@@ -1,5 +1,7 @@
 # Administration — version 2026-10-19.6
 
+Mise à jour du 29 octobre : voir [la recherche de sites et de profils pendant la saisie](RECHERCHE-SOURCES-2026-10-29.md) pour le nouveau formulaire d’ajout et ses vérifications. Le présent document décrit la version initiale de l’administration.
+
 Ouvrir **⚙ Administration**, à côté d’Actualiser. La même session privée
 Cloudflare que celle des fonctions protégées est nécessaire. Les API vérifient
 cette session côté serveur et l’origine des écritures. Aucun nouveau rôle ou
