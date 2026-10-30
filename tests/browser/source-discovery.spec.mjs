@@ -84,6 +84,9 @@ for(const platform of ['x','linkedin'])test(`Un profil ${platform} bloqué en HT
  const status=page.locator('#admin-source-verification');await expect(status).toContainText('403');await expect(status).toContainText('non vérifié');await expect(status).toHaveAttribute('data-status','unverified');await expect(status).not.toHaveClass(/(?:^|\s)(?:green|success|verified)(?:\s|$)/);
  await page.locator('#admin-editor button[type="submit"]').click();
  await expect.poll(()=>writes.filter(w=>w.action==='profiles').length).toBe(1);
+ // A received POST precedes the admin reload and the submit handler's final UI update.
+ await expect(page.locator('#admin-editor')).toBeHidden();
+ await page.waitForFunction(()=>adminBusy===false);
  const command=writes.find(w=>w.action==='profiles'),added=command.profiles.filter(p=>platform==='x'?p.x===handle:p.linkedin===url);
  expect(added).toHaveLength(1);expect(added[0].name).toBe(name);expect(added[0].enabled).toBe(true);
  expect(writes.some(w=>w.action==='save')).toBe(false);

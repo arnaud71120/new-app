@@ -2,7 +2,7 @@ export const SOURCE_DISCOVERY_STYLE=String.raw`
 .source-discovery{border-bottom:1px solid #36536a;padding-bottom:16px;margin-bottom:14px}.source-lookup-host{position:relative}.source-lookup-options{display:grid;gap:5px;max-height:290px;overflow:auto;border:1px solid #46617d;border-radius:12px;background:#0a1525;padding:7px;margin:6px 0}.source-lookup-options[hidden]{display:none}.source-lookup-options button{text-align:left;white-space:normal;overflow-wrap:anywhere;padding:12px;border:1px solid transparent;border-radius:9px;background:#142238;color:#e4edf8;min-height:52px}.source-lookup-options button[aria-selected=true]{border-color:#96dc9b;background:#25483d}.source-lookup-options strong,.source-lookup-options small{display:block}.source-lookup-options small{color:#a6b9cd;font-size:12px;line-height:1.6}.source-lookup-status,.source-verification{font-size:13px;line-height:1.7;overflow-wrap:anywhere;min-height:1.7em}.source-verification[data-status=verified]{color:#a1e6b6}.source-verification[data-status=error]{color:#ffc3a0}.source-verification[data-status=unverified]{color:#e1c782}.source-inline-lookup{margin:0 0 14px}.source-inline-lookup>label{margin-bottom:4px}.source-inline-lookup [data-source-verify]{padding:7px 11px;font-size:12px;min-height:36px}.source-lookup-status:empty,.source-verification:empty{display:none}.admin-dialog [hidden]{display:none!important}@media(max-width:650px){.source-lookup-options{max-height:250px}.source-lookup-options button{padding:11px}.source-lookup-options small{font-size:12px}.source-discovery{padding-bottom:12px}}
 `;
 export const SOURCE_DISCOVERY_SCRIPT=String.raw`
-const sourceLookupBindings=new WeakMap(),sourceLookupRecords=new Set();let sourceLookupCounter=0,sourceEditorAutoName='';const sourceEditorAutoFields=new Map();
+const sourceLookupBindings=new WeakMap(),sourceLookupRecords=new Set();let sourceLookupCounter=0,sourceEditorAutoName='',sourceEditorSaving=false;const sourceEditorAutoFields=new Map();
 const SOURCE_LOOKUP_X_RESERVED=new Set('home login logout signup search explore notifications messages settings compose intent i share tos privacy about help hashtag jobs download premium communities'.split(' '));
 const discoveryLabels={site:'Site · RSS / Atom',x:'X / Twitter',linkedin:'LinkedIn'};
 function sourceDiscoveryMessage(node,message,status='unverified'){if(!node)return;node.textContent=message||'';node.dataset.status=status;}
@@ -82,7 +82,7 @@ function configureSourceEditor(kind,editing=false){
  document.querySelectorAll('[data-admin-site-field]').forEach(field=>field.hidden=!site);$('#admin-social-value-field').hidden=site;$('#admin-url').required=site;$('#admin-profile-value').required=!site;$('#admin-interval').required=site;
  $('#admin-profile-label').textContent=kind==='x'?'Identifiant X sans @':'Adresse du profil LinkedIn /in/';$('#admin-profile-value').placeholder=kind==='x'?'identifiant ou https://x.com/identifiant':'https://www.linkedin.com/in/profil/';
  $('#admin-editor-title').textContent=editing?$('#admin-editor-title').textContent:'Ajouter '+discoveryLabels[kind];$('#admin-editor-note').textContent=site?'Les suggestions sont vérifiées avant leur utilisation. Une adresse de flux peut aussi être saisie manuellement ; la vérification ne bloque pas son enregistrement.':'Le profil sera ajouté aux comptes suivis. Un blocage 403 ou une page de connexion n’est pas une confirmation de collecte. Le budget et les autorisations sont revalidés à l’enregistrement.';
- $('#admin-source-save').disabled=!site&&!admin;$('#admin-source-save').textContent=site?'Enregistrer la source':'Enregistrer le profil';
+ $('#admin-source-save').disabled=sourceEditorSaving||!site&&!admin;$('#admin-source-save').textContent=site?'Enregistrer la source':'Enregistrer le profil';
 }
 function bindSourceLookups(){
  const saveProfiles=$('#profile-save');if(saveProfiles){saveProfiles.disabled=adminState?.role!=='admin';saveProfiles.title=saveProfiles.disabled?'L’enregistrement de profils sociaux exige le rôle administrateur.':'';}
@@ -93,7 +93,7 @@ function bindSourceLookups(){
 }
 function bindSourceDiscovery(){
  const editor=$('#admin-editor');if(!editor?.querySelector)return;
- const editBeforeDiscovery=editAdminSource;editAdminSource=function(id){cancelSourceLookups(editor);editBeforeDiscovery(id);sourceEditorAutoName='';sourceEditorAutoFields.clear();$('#admin-source-query').value='';const lookup=sourceLookupBindings.get($('#admin-source-query'));if(lookup){lookup.items=[];lookup.status.textContent='';lookup.close();}$('#admin-profile-value').value='';$('#admin-feed-choice-field').hidden=true;sourceDiscoveryMessage($('#admin-source-verification'),'');configureSourceEditor('site',!!id);bindSourceLookups();};
+ const editBeforeDiscovery=editAdminSource;editAdminSource=function(id){if(sourceEditorSaving||adminBusy)return;cancelSourceLookups(editor);editBeforeDiscovery(id);sourceEditorAutoName='';sourceEditorAutoFields.clear();$('#admin-source-query').value='';const lookup=sourceLookupBindings.get($('#admin-source-query'));if(lookup){lookup.items=[];lookup.status.textContent='';lookup.close();}$('#admin-profile-value').value='';$('#admin-feed-choice-field').hidden=true;sourceDiscoveryMessage($('#admin-source-verification'),'');configureSourceEditor('site',!!id);bindSourceLookups();};
  const renderBeforeDiscovery=renderAdmin;renderAdmin=function(){cancelSourceLookups($('#admin-content'));renderBeforeDiscovery();bindSourceLookups();};
  $('#admin-source-kind').onchange=()=>{cancelSourceLookups(editor);clearSourceEditorAutoFields();$('#admin-profile-value').value='';$('#admin-source-query').value='';const lookup=sourceLookupBindings.get($('#admin-source-query'));if(lookup){lookup.items=[];lookup.status.textContent='';lookup.close();}$('#admin-feed-choice-field').hidden=true;sourceDiscoveryMessage($('#admin-source-verification'),'');configureSourceEditor($('#admin-source-kind').value);};
  for(const selector of ['#admin-url','#admin-home','#admin-profile-value'])$(selector).addEventListener('input',invalidateSourceEditorManualChange);
@@ -101,7 +101,10 @@ function bindSourceDiscovery(){
  $('#admin-verify-url').onclick=()=>{const record=sourceLookupBindings.get($('#admin-source-query')),url=sourceCandidateUrl('site',$('#admin-url').value||$('#admin-home').value);if(url)record.verify(url,{url,name:$('#admin-name').value});else sourceDiscoveryMessage($('#admin-source-verification'),'Indiquez une adresse publique HTTPS à vérifier.','error');};
  $('#admin-verify-profile').onclick=()=>{const platform=$('#admin-source-kind').value,record=sourceLookupBindings.get($('#admin-source-query')),url=sourceCandidateUrl(platform,$('#admin-profile-value').value);if(url)record.verify(url,{url,name:$('#admin-name').value});else sourceDiscoveryMessage($('#admin-source-verification'),'Indiquez un identifiant X ou une adresse LinkedIn /in/ valide.','error');};
  const submitSite=editor.onsubmit;editor.onsubmit=async event=>{
-  const platform=$('#admin-source-kind').value;if(platform==='site')return submitSite(event);event.preventDefault();if(adminBusy)return;
+  event.preventDefault();if(sourceEditorSaving||adminBusy)return;
+  const add=$('#admin-add'),save=$('#admin-source-save'),addWasDisabled=add.disabled;sourceEditorSaving=true;add.disabled=true;save.disabled=true;editor.setAttribute('aria-busy','true');
+  try{
+  const platform=$('#admin-source-kind').value;if(platform==='site')return await submitSite(event);
   if(adminState?.role!=='admin'){adminStatus('L’enregistrement de profils sociaux exige le rôle administrateur.',true);return;}
   const name=$('#admin-name').value.trim(),value=$('#admin-profile-value').value.trim(),handle=platform==='x'?sourceXHandle(value):null,linkedin=platform==='linkedin'?sourceLinkedInUrl(value):null;
   if(!name||name.length>120||platform==='x'&&!handle||platform==='linkedin'&&!linkedin){adminStatus('Indiquez un nom et un identifiant X ou une adresse LinkedIn /in/ valide.',true);return;}
@@ -109,6 +112,7 @@ function bindSourceDiscovery(){
   if(profiles.some(profile=>platform==='x'&&String(profile.x||'').toLowerCase()===handle.toLowerCase()||platform==='linkedin'&&sourceLinkedInUrl(profile.linkedin)?.toLowerCase()===linkedin.toLowerCase())){adminStatus('Ce profil est déjà dans les comptes suivis. Modifiez sa ligne existante.',true);return;}
   const profile={id:'profile-'+crypto.randomUUID(),name,x:handle,linkedin,enabled:$('#admin-enabled').checked,priority:0},xHours=$('#social-x-hours'),liHours=$('#social-li-hours'),socialSchedule=xHours&&liHours?{xHours:Number(xHours.value),linkedinHours:Number(liHours.value)}:adminState.configuration?.socialSchedule;
   if(await adminCommand({action:'profiles',profiles:[...profiles,profile],...(socialSchedule?{socialSchedule}:{})})){editor.hidden=true;cancelSourceLookups(editor);}
+  }finally{sourceEditorSaving=false;add.disabled=addWasDisabled;save.disabled=$('#admin-source-kind').value!=='site'&&adminState?.role!=='admin';editor.setAttribute('aria-busy','false');}
  };
  bindSourceLookups();
 }
