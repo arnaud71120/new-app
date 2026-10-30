@@ -55,6 +55,8 @@ test('La recherche respecte le seuil et le debounce puis remplit un flux vérifi
  expect(verifications).toEqual([{platform:'site',url:'https://www.cyber-audit-fixture.fr/'}]);
  await page.locator('#admin-editor button[type="submit"]').click();
  await expect.poll(()=>writes.filter(w=>w.action==='save').length).toBe(1);
+ await expect(page.locator('#admin-editor')).toBeHidden();
+ await page.waitForFunction(()=>adminBusy===false);
  expect(writes.find(w=>w.action==='save').source).toMatchObject({name:'Cyber Audit RSS',url:feedUrl,home:'https://www.cyber-audit-fixture.fr/'});
 });
 
