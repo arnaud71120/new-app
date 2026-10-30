@@ -1,14 +1,20 @@
 import {test,expect} from '@playwright/test';
 
 const owner='local-runtime-test-owner-token-2026';
+let fixtureClient=0;
 const searchURL='**/api/source-search**';
 const candidate=(platform,name,url,extra={})=>({platform,name,url,origin:'search',verification:'candidate',message:'Adresse proposée, vérification nécessaire.',...extra});
 const options=page=>page.locator('[data-source-results]:visible [data-source-option]');
 
 async function enterAdmin(page){
+ // Contexts share the local Durable Object; model a separate client per scenario
+ // so unrelated tests do not consume the same 20-per-minute login bucket.
+ await page.context().setExtraHTTPHeaders({'CF-Connecting-IP':'198.51.100.'+(++fixtureClient)});
+ const failures=[];page.on('response',async response=>{const path=new URL(response.url()).pathname;if(!path.startsWith('/api/')||![401,429].includes(response.status()))return;try{const value=await response.json();failures.push({path,status:response.status(),code:value.code||null,error:value.error||null});}catch{failures.push({path,status:response.status()});}});
  await page.addInitScript(token=>sessionStorage.setItem('cyberveille-access',token),owner);
  await page.goto('/');await page.locator('#admin-open').click();
- await expect(page.locator('#admin-content')).toContainText('sources au catalogue');
+ try{await expect(page.locator('#admin-content')).toContainText('sources au catalogue');}
+ catch(error){console.error('Source-discovery admin startup failure:',JSON.stringify({failures,adminStatus:await page.locator('#admin-status').textContent(),connection:await page.evaluate(()=>({state:typeof connectionState==='undefined'?null:connectionState,failures:typeof connectionFailures==='undefined'?null:connectionFailures,result:document.querySelector('#connection-result')?.textContent||null}))}));throw error;}
 }
 async function openAdder(page,platform='site'){
  await page.locator('#admin-add').click();await expect(page.locator('#admin-editor')).toBeVisible();
