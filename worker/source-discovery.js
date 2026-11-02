@@ -70,7 +70,7 @@ function metadata(html){
 function wall(url,html,title){return /\/(?:authwall|checkpoint|login|signin)(?:[/?#]|$)|\/i\/flow\/login/i.test(new URL(url).pathname)||/sign in to (?:view|continue)|join linkedin to (?:view|see)|connectez-vous pour (?:voir|continuer)|javascript is not available/i.test(clean(html).slice(0,20000))||/^(?:just a moment|access denied|verify you are human|security verification|sign in|log in|connexion)/i.test(title);}
 function suggestion(platform,url,name,origin,extra={}){return {platform,name:String(name||new URL(url).hostname).slice(0,200),url,...extra,origin,verification:origin==='catalog'?'catalog':origin==='web'?'indexed':'unverified',message:origin==='catalog'?'Source déjà présente dans le catalogue ; état à vérifier.':origin==='web'?'Profil ou site indexé sur le Web ; existence et collecte non vérifiées.':'Adresse proposée ; sélectionnez-la pour lancer une vérification.'};}
 function localResults(platform,query,sources,profiles){
- const term=folded(query),results=[];if(platform==='site')for(const source of sources){try{const home=normalizeSourceURL('site',source.home||new URL(source.url).origin+'/'),feedUrl=normalizeSourceURL('site',source.url);if(folded([source.name,home,feedUrl].join(' ')).includes(term))results.push(suggestion(platform,home,source.name,'catalog',{home,feedUrl}));}catch{}}
+ const term=folded(platform==='x'?query.replace(/^@/,''):query),results=[];if(platform==='site')for(const source of sources){try{const home=normalizeSourceURL('site',source.home||new URL(source.url).origin+'/'),feedUrl=normalizeSourceURL('site',source.url);if(folded([source.name,home,feedUrl].join(' ')).includes(term))results.push(suggestion(platform,home,source.name,'catalog',{home,feedUrl}));}catch{}}
  else for(const profile of profiles){const value=profile[platform];if(!value)continue;try{const url=normalizeSourceURL(platform,value);if(folded([profile.name,url,value].join(' ')).includes(term))results.push(suggestion(platform,url,profile.name,'catalog',platform==='x'?{handle:new URL(url).pathname.slice(1)}:{}));}catch{}}
  return results;
 }
@@ -81,10 +81,13 @@ export async function searchSources({platform,query,sources=[],profiles=[],pause
  platform=platformValue(platform);query=typeof query==='string'?query.trim():'';const output={platform,query,results:[],status:paused?'paused':'partial',message:''};
  if(!['site','x','linkedin'].includes(platform)||query.length<2||query.length>2048){output.message='Saisissez au moins deux caractères ou une adresse publique valide.';return output;}
  if(/(?:^|\s)[^/\s:@]+:[^/\s@]+@(?:[a-z0-9-]+\.)+[a-z]{2,63}/i.test(query)||/\b(?:api[_-]?key|access[_-]?token|authorization|password|client[_-]?secret|session[_-]?id|token|secret)\s*[:=]/i.test(query)||/^(?:file|ftp|data|javascript|mailto):/i.test(query)){output.query='';output.message='Retirez les identifiants et paramètres secrets avant la recherche.';return output;}
- let direct;try{direct=directQuery(platform,query);}catch{output.query='';output.message='Cette adresse ne désigne pas un site public ou un profil pris en charge, ou contient un secret.';return output;}
+ let direct,candidate;try{direct=directQuery(platform,query);}catch{output.query='';output.message='Cette adresse ne désigne pas un site public ou un profil pris en charge, ou contient un secret.';return output;}
+ // A single word may be either an account name or a handle. Offer its address,
+ // without claiming it exists, and still search for matching public profiles.
+ if(!direct&&platform==='x'&&/^[a-z0-9_]{2,15}$/i.test(query))try{candidate=normalizeSourceURL('x',query);}catch{}
  if(!direct&&query.length>120){output.message='La recherche par nom est limitée à 120 caractères.';return output;}
  output.results=localResults(platform,query,sources,profiles);
- if(direct)output.results.unshift(suggestion(platform,direct,platform==='x'?'@'+new URL(direct).pathname.slice(1):new URL(direct).hostname,'address',platform==='site'?{home:direct}:platform==='x'?{handle:new URL(direct).pathname.slice(1)}:{}));
+ if(direct||candidate){const address=direct||candidate;output.results.unshift(suggestion(platform,address,platform==='x'?'@'+new URL(address).pathname.slice(1):new URL(address).hostname,'address',platform==='site'?{home:address}:platform==='x'?{handle:new URL(address).pathname.slice(1)}:{}));}
  const unique=()=>output.results=[...new Map(output.results.map(item=>[item.url,item])).values()].slice(0,8);unique();
  if(paused){output.message='Appels externes suspendus : seules les adresses et le catalogue local sont proposés.';return output;}
  if(direct||output.results.length===8){output.status='ok';output.message=direct?'Adresse reconnue ; la vérification sera faite après sélection.':'Suggestions du catalogue local.';return output;}
