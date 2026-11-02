@@ -18,7 +18,7 @@ async function enterAdmin(page){
 }
 async function openAdder(page,platform='site'){
  await page.locator('#admin-add').click();await expect(page.locator('#admin-editor')).toBeVisible();
- await page.locator('#admin-source-kind').selectOption(platform);
+ await page.locator('[data-source-kind="'+platform+'"]').click();
 }
 async function captureAdminWrites(page){
  const writes=[];let profiles=null,revision=null;
@@ -47,7 +47,7 @@ test('La recherche respecte le seuil et le debounce puis remplit un flux vérifi
  await enterAdmin(page);await openAdder(page);
  const query=page.locator('#admin-source-query');await expect(query).toHaveAttribute('role','combobox');
  await query.fill('c');await page.waitForTimeout(500);expect(queries).toEqual([]);
- await query.fill('');await query.pressSequentially('cyber',{delay:60});await expect(options(page)).toHaveCount(2);expect(queries).toEqual(['cyber']);
+ await query.fill('');await query.pressSequentially('auditfixture',{delay:40});await expect(options(page)).toHaveCount(2);expect(queries).toEqual(['auditfixture']);
  await expect(options(page).first()).toContainText('Cyber Audit');
  await query.press('ArrowUp');await expect(options(page).last()).toHaveAttribute('aria-selected','true');await query.press('ArrowDown');await expect(options(page).first()).toHaveAttribute('aria-selected','true');await query.press('Enter');
  await expect(page.locator('#admin-source-verification')).toContainText('Flux RSS reconnu');
@@ -143,4 +143,94 @@ test('Une vérification différée ne remplace pas une adresse de flux saisie ma
  await verificationRoute.fulfill({json:{status:'verified',httpStatus:200,name:'Site Alpha différé',url:site,home:site,feedUrl:oldFeed,feeds:[{url:oldFeed,verified:true}],message:'Ancien flux Alpha confirmé.'}}).catch(()=>{});
  await page.waitForTimeout(150);
  await expect(feed).toHaveValue(manualFeed);await expect(verification).not.toHaveAttribute('data-status','verified');await expect(verification).not.toContainText('Ancien flux Alpha confirmé');
+});
+
+
+test('Les trois types sont visibles et un @ est proposé même lorsque la recherche distante échoue',async({page})=>{
+ let remoteQueries=0;
+ await page.route(searchURL,async route=>{
+  if(route.request().method()==='POST'){await route.fulfill({json:{status:'unverified',httpStatus:403,url:'https://x.com/audit_failover',handle:'audit_failover',message:'Vérification bloquée en HTTP 403.'}});return;}
+  remoteQueries++;await route.fulfill({status:503,json:{error:'Recherche distante indisponible.'}});
+ });
+ await enterAdmin(page);await openAdder(page);
+ for(const platform of ['site','x','linkedin'])await expect(page.locator('[data-source-kind="'+platform+'"]')).toBeVisible();
+ const query=page.locator('#admin-source-query');await expect(query).toBeFocused();
+ await query.fill('@audit_failover');
+ await expect(page.locator('[data-source-kind="x"]')).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('#admin-source-query-label')).toContainText('Twitter');
+ await expect(options(page)).toContainText(['https://x.com/audit_failover']);
+ await expect(options(page)).toContainText(['non vérifiée']);
+ await expect.poll(()=>remoteQueries).toBe(1);
+ await expect(page.locator('#admin-source-query-host .source-lookup-status')).toContainText('indisponible');
+ await expect(options(page)).toContainText(['https://x.com/audit_failover']);
+ await options(page).click();await expect(page.locator('#admin-profile-value')).toHaveValue('audit_failover');
+ await expect(page.locator('#admin-source-verification')).toContainText('403');
+});
+
+test('Le vrai endpoint propose les comptes du catalogue et les identifiants directs sans appel externe',async({page})=>{
+ await enterAdmin(page);await openAdder(page,'x');
+ const known=await page.evaluate(()=>adminState.profiles.find(profile=>profile.x&&profile.name.length>=3));expect(known).toBeTruthy();
+ const query=page.locator('#admin-source-query');let response=page.waitForResponse(r=>r.url().includes('/api/source-search?')&&r.request().method()==='GET');
+ await query.fill(known.name.slice(0,3));
+ await expect(options(page).filter({hasText:known.name})).toHaveCount(1);
+ let result=await (await response).json();expect(result.status).toBe('paused');expect(result.results.some(item=>item.name===known.name)).toBe(true);
+ response=page.waitForResponse(r=>r.url().includes('/api/source-search?')&&r.request().method()==='GET');
+ await query.fill('@source_real_26');await expect(options(page)).toContainText(['https://x.com/source_real_26']);
+ result=await (await response).json();expect(result.results.some(item=>item.url==='https://x.com/source_real_26')).toBe(true);
+ await options(page).click();await expect(page.locator('#admin-profile-value')).toHaveValue('source_real_26');
+ await expect(page.locator('#admin-source-verification')).toContainText('suspendus');
+ // The dedicated identifier field also searches, rather than silently ignoring input.
+ const identifier=page.locator('#admin-profile-value');await identifier.fill('@field_source_26');
+ await expect(options(page)).toContainText(['https://x.com/field_source_26']);
+ await options(page).click();await expect(identifier).toHaveValue('field_source_26');
+ await page.locator('[data-source-kind="linkedin"]').click();
+ await expect(page.locator('#admin-source-query-label')).toContainText('LinkedIn');
+ await expect(page.locator('#admin-source-query')).toHaveAttribute('placeholder',/linkedin\.com/);
+ await expect(page.locator('[data-source-kind="x"]')).toHaveAttribute('aria-pressed','false');
+});
+
+test('Un échec de chargement empêche un formulaire inactif et permet de réessayer',async({page})=>{
+ const asset='**/assets/source-discovery-2026-11-02.1.js';
+ await page.route(asset,route=>route.fulfill({status:503,body:'Unavailable',contentType:'text/plain'}));
+ await enterAdmin(page);
+ await expect(page.locator('#admin-status')).toContainText('recherche n’a pas pu être chargée');
+ await expect(page.locator('#admin-add')).toBeDisabled();
+ await page.locator('#admin-close').click();await page.unroute(asset);
+ await page.locator('#admin-open').click();await expect(page.locator('#admin-add')).toBeEnabled();
+ await page.locator('#admin-add').click();
+ await expect(page.locator('[data-source-kind="x"]')).toBeVisible();
+ await page.locator('[data-source-kind="x"]').click();
+ await expect(page.locator('#admin-source-query-label')).toContainText('Twitter');
+});
+
+test('Un résultat indexé complète le nom de l’adresse proposée sans dupliquer le compte',async({page})=>{
+ let pending,markStarted;const started=new Promise(resolve=>markStarted=resolve);
+ await page.route(searchURL,route=>{pending=route;markStarted();});
+ await enterAdmin(page);await openAdder(page,'x');
+ await page.locator('#admin-source-query').fill('audit_match');
+ await expect(options(page)).toContainText(['@audit_match']);await started;
+ await pending.fulfill({json:{status:'ok',results:[{platform:'x',name:'Audit Match · équipe de recherche',url:'https://x.com/audit_match',handle:'audit_match',origin:'web',verification:'indexed'}]}});
+ await expect(options(page)).toHaveCount(1);
+ await expect(options(page)).toContainText(['Audit Match · équipe de recherche']);
+ await expect(options(page)).toContainText(['Résultat indexé']);
+});
+
+
+test('Changer la recherche annule la vérification de l’autre champ et les anciens résultats disparaissent',async({page})=>{
+ let pending,markStarted;const started=new Promise(resolve=>markStarted=resolve);
+ await page.route(searchURL,async route=>{
+  if(route.request().method()==='POST'){pending=route;markStarted();return;}
+  await route.fulfill({json:{status:'ok',results:[]}});
+ });
+ await enterAdmin(page);await openAdder(page,'x');
+ const identifier=page.locator('#admin-profile-value'),query=page.locator('#admin-source-query');
+ await identifier.fill('@pending_old_26');await expect(options(page)).toContainText(['https://x.com/pending_old_26']);
+ await options(page).click();await started;
+ await query.fill('@current_new_26');await expect(options(page)).toContainText(['https://x.com/current_new_26']);
+ await pending.fulfill({json:{status:'verified',name:'Ancien compte',url:'https://x.com/pending_old_26',handle:'pending_old_26',message:'Ancien compte vérifié.'}}).catch(()=>{});
+ await page.waitForTimeout(150);await expect(page.locator('#admin-source-verification')).not.toContainText('Ancien compte vérifié');
+ await page.locator('[data-source-kind="linkedin"]').click();
+ await expect(page.locator('[data-source-results]:visible')).toHaveCount(0);
+ await expect(page.locator('#admin-social-value-field .source-lookup-status')).toBeEmpty();
+ await expect(identifier).toHaveValue('');
 });

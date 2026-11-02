@@ -87,6 +87,19 @@ test('Runtime Cloudflare : pause globale conserve le catalogue local sans recher
  try{
   mf=await runtime(0,{outboundService:request=>{outbound.push(request.url);return new WorkerResponse('Network forbidden during pause',{status:599});}});
   const call=client(mf),before=await call('/api/admin');
+  // Exercise the actual query parser and default profile catalogue. Browser
+  // fixtures that replace this endpoint cannot catch platform/encoding bugs.
+  const direct=await call('/api/source-search?'+new URLSearchParams({platform:'x',q:'@Fresh_Account'}));
+  assert.equal(direct.status,200);assert.equal(direct.body.platform,'x');
+  assert.ok(direct.body.results.some(result=>result.url==='https://x.com/fresh_account'&&result.verification==='unverified'));
+  const known=before.body.profiles.find(profile=>profile.x);
+  assert.ok(known);
+  const prefix=await call('/api/source-search?'+new URLSearchParams({platform:'x',q:'@'+known.x.slice(0,3)}));
+  assert.equal(prefix.status,200);assert.ok(prefix.body.results.some(result=>result.origin==='catalog'&&result.url==='https://x.com/'+known.x.toLowerCase()));
+  for(const platform of ['site','x','linkedin']){
+   const rejected=await call('/api/source-search?'+new URLSearchParams({platform,q:'name\u0001'}));
+   assert.equal(rejected.status,400);
+  }
   const search=await call('/api/source-search?platform=site&q=zataz');assert.equal(search.status,200);assert.equal(search.body.status,'paused');assert.ok(search.body.results.some(result=>result.origin==='catalog'&&/zataz/i.test(result.name)));
   const verify=await call('/api/source-search',{body:{platform:'site',url:sourceURL}});assert.equal(verify.status,200);assert.equal(verify.body.status,'unverified');
   const after=await call('/api/admin');assert.equal(after.body.revision,before.body.revision);assert.deepEqual(after.body.configuration,before.body.configuration);assert.deepEqual(outbound,[]);
