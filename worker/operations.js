@@ -14,8 +14,8 @@ export async function operationState(storage){
  return {runs,push:await storage.get('push:last-run')||null,backups:await storage.get('admin:backups')||[],heartbeat:await storage.get('ops:heartbeat')||null,metrics:{sample:runs.length,errors:runs.filter(r=>r.status==='error').length,p50:times.length?times[Math.floor((times.length-1)*.5)]:null,p95:times.length?times[Math.floor((times.length-1)*.95)]:null},retention:{runs:500,posts:800,postDays:60,backups:20}};
 }
 export function sourceCoverage(sources,records,now=Date.now()){
- return sources.map(s=>{const r=records.find(r=>r.source===s.id),dates=(r?.articles||[]).map(a=>a.date).filter(x=>Number.isFinite(Date.parse(x))).sort(),latest=dates.at(-1)||null,threshold=(s.staleAfterHours||48)*3600000;
- return {id:s.id,name:s.name,enabled:s.enabled,status:!s.enabled?'paused':!r?'unseen':r.status==='error'?'error':now-Date.parse(r.checkedAt)>Math.max(Math.ceil(sources.filter(s=>s.enabled).length/8)*900000+900000,(s.intervalMinutes||1)*180000)?'collection_late':latest&&now-Date.parse(latest)>threshold?'old_content':'fresh',latestPostAt:latest,checkedAt:r?.checkedAt||null,code:r?.code||null,count:r?.articles?.length||0};});
+ return sources.map(s=>{const r=records.find(r=>r.source===s.id),dates=(r?.articles||[]).map(a=>a.date).filter(x=>Number.isFinite(Date.parse(x))).sort(),latest=r?.latestPostAt||dates.at(-1)||null,threshold=(s.staleAfterHours||48)*3600000;
+ return {id:s.id,name:s.name,enabled:s.enabled,status:!s.enabled?'paused':!r?'unseen':r.status==='error'?'error':now-Date.parse(r.checkedAt)>Math.max(Math.ceil(sources.filter(s=>s.enabled).length/8)*900000+900000,(s.intervalMinutes||1)*180000)?'collection_late':latest&&now-Date.parse(latest)>threshold?'old_content':'fresh',latestPostAt:latest,checkedAt:r?.checkedAt||null,code:r?.code||null,count:r?.count??r?.articles?.length??0};});
 }
 export async function retentionMaintenance(storage,now=Date.now()){
  const cursor=await storage.get('cleanup:cursor'),page=await storage.list({limit:1000,...(cursor?{startAfter:cursor}:{})});
