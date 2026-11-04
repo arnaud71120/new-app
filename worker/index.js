@@ -593,8 +593,10 @@ async function sourceSearchRequest(request,env){
  const url=new URL(request.url),isSearch=request.method==='GET';
  if(!isSearch&&request.method!=='POST')return json({error:'Méthode refusée.'},405);
  if(!isSearch&&request.headers.get('Origin')!==url.origin)return json({error:'Origine refusée.'},403);
- const who=await serviceStage(request,'source-discovery','access',userIdentity(request,env));if(!who)return privateAccessFailure(request,env);
- const role=await serviceStage(request,'source-discovery','permissions',administrativeRole(request,env));if(!['admin','editor'].includes(role))return json({error:'Droit administrateur ou éditeur requis.'},403);
+ // Leave room for the 5-second JWKS timeout, bounded fallback verification,
+ // and an owner-session check; the stage deadline must not preempt those.
+ const who=await serviceStage(request,'source-discovery','access',userIdentity(request,env),12000);if(!who)return privateAccessFailure(request,env);
+ const role=await serviceStage(request,'source-discovery','permissions',administrativeRole(request,env),12000);if(!['admin','editor'].includes(role))return json({error:'Droit administrateur ou éditeur requis.'},403);
  let input;
  if(isSearch)input={platform:url.searchParams.get('platform'),query:(url.searchParams.get('q')||'').trim()};
  else try{input=JSON.parse(await limitedText(request,4096));}catch(error){return json({error:error.message==='Document trop volumineux'?'Demande trop volumineuse.':'Demande de vérification invalide.'},error.message==='Document trop volumineux'?413:400);}
@@ -673,7 +675,7 @@ async function adminRequest(request,env){
  const u=new URL(request.url);if(!['GET','POST'].includes(request.method))return json({error:'Méthode refusée'},405);
  if(request.method==='POST'&&request.headers.get('Origin')!==u.origin)return json({error:'Origine refusée'},403);
  if(!await authorized(request,env))return json({error:'Session privée requise pour administrer Cyberveille.'},401);
- const role=await serviceStage(request,'administration','permissions',administrativeRole(request,env));if(!['admin','editor'].includes(role))return json({error:'Droit administrateur ou éditeur requis.'},403);const stub=await socialStub(env);if(!stub)return json({error:'Le stockage Cloudflare est nécessaire pour enregistrer la configuration.'},503);
+ const role=await serviceStage(request,'administration','permissions',administrativeRole(request,env),12000);if(!['admin','editor'].includes(role))return json({error:'Droit administrateur ou éditeur requis.'},403);const stub=await socialStub(env);if(!stub)return json({error:'Le stockage Cloudflare est nécessaire pour enregistrer la configuration.'},503);
  if(request.method==='GET'){
   const catalog=await sourceConfig(env,request);
   const reads=await Promise.allSettled([adminStoreRead(stub,'feeds?summary=1',request),adminStoreRead(stub,'admin-probes',request),serviceStage(request,'administration','social-state',socialData(env,false,true)),serviceStage(request,'administration','gemini-state',previousGemini(env))]);
