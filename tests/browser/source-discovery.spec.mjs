@@ -190,7 +190,7 @@ test('Le vrai endpoint propose les comptes du catalogue et les identifiants dire
 });
 
 test('Un échec de chargement empêche un formulaire inactif et permet de réessayer',async({page})=>{
- const asset='**/assets/source-discovery-2026-11-02.1.js';
+ const asset='**/assets/source-discovery-2026-11-04.1.js';
  await page.route(asset,route=>route.fulfill({status:503,body:'Unavailable',contentType:'text/plain'}));
  await enterAdmin(page);
  await expect(page.locator('#admin-status')).toContainText('recherche n’a pas pu être chargée');
@@ -233,4 +233,67 @@ test('Changer la recherche annule la vérification de l’autre champ et les anc
  await expect(page.locator('[data-source-results]:visible')).toHaveCount(0);
  await expect(page.locator('#admin-social-value-field .source-lookup-status')).toBeEmpty();
  await expect(identifier).toHaveValue('');
+});
+
+test('Une erreur de passerelle, une panne du stockage et une réponse 503 du site ont des diagnostics distincts',async({page})=>{
+ let mode='gateway';
+ await page.route(searchURL,async route=>{
+  if(route.request().method()==='GET'){await route.fulfill({json:{status:'ok',results:[]}});return;}
+  if(mode==='gateway'){await route.fulfill({status:503,contentType:'text/html',headers:{'CF-Ray':'trace-source-503-MRS'},body:'<!doctype html><title>Service unavailable</title>'});return;}
+  if(mode==='storage'){await route.fulfill({status:503,headers:{'X-Request-ID':'trace-storage-503'},json:{error:'Stockage de configuration indisponible.',code:'storage_unavailable',stage:'configuration',service:'social-store',requestId:'trace-storage-503'}});return;}
+  await route.fulfill({json:{status:'unverified',httpStatus:503,url:'https://x.com/tariqkrim',handle:'tariqkrim',message:'La source répond HTTP 503 ; vérification non confirmée.'}});
+ });
+ await enterAdmin(page);await openAdder(page,'x');
+ await page.locator('#admin-source-query').fill('@tariqkrim');await expect(options(page)).toHaveCount(1);await options(page).click();
+ const status=page.locator('#admin-source-verification');
+ await expect(status).toContainText('/api/source-search');await expect(status).toContainText('passerelle');await expect(status).toContainText('Référence : trace-source-503-MRS');await expect(status).toHaveAttribute('data-status','error');
+ await expect(status).not.toContainText('session expirée');
+ mode='storage';await page.locator('#admin-verify-profile').click();
+ await expect(status).toContainText('Code : storage_unavailable');await expect(status).toContainText('Étape : configuration');await expect(status).toContainText('Service : social-store');await expect(status).toContainText('Référence : trace-storage-503');
+ mode='provider';await page.locator('#admin-verify-profile').click();
+ await expect(status).toContainText('X / Twitter');await expect(status).toContainText('Réponse de la source HTTP 503');await expect(status).toHaveAttribute('data-status','unverified');
+ await expect(status).not.toContainText('/api/source-search');await expect(status).not.toContainText('trace-storage-503');
+});
+
+test('Une administration non chargée ne prétend pas connaître le rôle et le rechargement rétablit les droits',async({page})=>{
+ let unavailable=true,operations=0;
+ await page.route('**/api/admin',async route=>unavailable?route.fulfill({status:503,json:{error:'Configuration temporairement inaccessible.',code:'storage_unavailable',stage:'configuration',service:'social-store',requestId:'admin-initial-503'}}):route.continue());
+ await page.route('**/api/operations',async route=>{operations++;await route.continue();});
+ await page.context().setExtraHTTPHeaders({'CF-Connecting-IP':'198.51.100.'+(++fixtureClient)});
+ await page.addInitScript(token=>sessionStorage.setItem('cyberveille-access',token),owner);
+ await page.goto('/');await page.locator('#admin-open').click();
+ await expect(page.locator('#admin-status')).toContainText('admin-initial-503');expect(operations).toBe(0);
+ await openAdder(page,'x');
+ const note=page.locator('#admin-source-role-note');await expect(note).toContainText('droits et la configuration ne sont pas chargés');await expect(note).not.toContainText('éditeurs');
+ await expect(page.locator('#admin-source-save')).toBeDisabled();
+ unavailable=false;await page.locator('#admin-reload').click();
+ await expect(page.locator('#admin-status')).toContainText('États chargés');await expect(note).toBeHidden();await expect(page.locator('#admin-source-save')).toBeEnabled();await expect.poll(()=>operations).toBe(1);
+ // A failed refresh retains the last snapshot for reading, but its role is no longer current.
+ unavailable=true;operations=0;await page.locator('#admin-reload').click();
+ await expect(page.locator('#admin-status')).toContainText('admin-initial-503');expect(operations).toBe(0);
+ await expect(note).toContainText('droits et la configuration ne sont pas chargés');await expect(page.locator('#admin-source-save')).toBeDisabled();
+});
+
+test('Une modification acceptée garde le diagnostic de relecture au lieu d’afficher un faux succès complet',async({page})=>{
+ await enterAdmin(page);let posts=0;
+ await page.route('**/api/admin',async route=>{
+  if(route.request().method()==='POST'){posts++;await route.fulfill({json:{ok:true,revision:20}});return;}
+  await route.fulfill({status:503,json:{error:'Relecture de configuration indisponible.',code:'storage_unavailable',stage:'configuration',requestId:'admin-reload-503'}});
+ });
+ await openAdder(page);await page.locator('#admin-name').fill('Source enregistrée fixture');await page.locator('#admin-url').fill('https://www.saved-source-fixture.fr/rss.xml');
+ await page.locator('#admin-source-save').click();
+ await expect(page.locator('#admin-status')).toContainText('Modification acceptée');await expect(page.locator('#admin-status')).toContainText('Référence : admin-reload-503');await expect(page.locator('#admin-status')).toContainText('relecture');
+ await expect(page.locator('#admin-editor')).toBeHidden();expect(posts).toBe(1);
+});
+
+test('Un diagnostic partiel conserve son avertissement et les droits réellement chargés',async({page})=>{
+ await page.route('**/api/admin',async route=>{
+  const response=await route.fetch(),value=await response.json();
+  await route.fulfill({response,json:{...value,warnings:[{error:'États de collecte indisponibles.',code:'monitoring_unavailable',stage:'feed-monitor',service:'social-store',requestId:'monitor-warning-503'}]}});
+ });
+ const operations=page.waitForResponse(response=>response.url().includes('/api/operations'));
+ await enterAdmin(page);await operations;
+ await expect(page.locator('#admin-status')).toContainText('Diagnostic incomplet');await expect(page.locator('#admin-status')).toContainText('monitor-warning-503');
+ await openAdder(page,'x');await expect(page.locator('#admin-source-role-note')).toBeHidden();await expect(page.locator('#admin-source-save')).toBeEnabled();
+ expect(await page.evaluate(()=>adminLoadCurrent)).toBe(true);
 });
