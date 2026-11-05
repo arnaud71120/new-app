@@ -2,6 +2,8 @@
 
 Mise à jour du 4 novembre : voir [la correction des erreurs de chargement et de diagnostic](CORRECTION-ADMINISTRATION-2026-11-04.md), ainsi que [la recherche de sites et de profils pendant la saisie](RECHERCHE-SOURCES-2026-10-29.md). Le présent document décrit la version initiale de l’administration.
 
+Le bouton [Synchroniser maintenant](SYNCHRONISATION-MANUELLE-2026-11-04.md) permet également de lancer X et LinkedIn sans attendre l’horaire quotidien.
+
 Ouvrir **⚙ Administration**, à côté d’Actualiser. La même session privée
 Cloudflare que celle des fonctions protégées est nécessaire. Les API vérifient
 cette session côté serveur et l’origine des écritures. Aucun nouveau rôle ou
