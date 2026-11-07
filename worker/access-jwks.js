@@ -2,8 +2,8 @@
 // Refreshed daily by the dedicated trusted workflow; bounded seven-day fallback.
 export const ACCESS_JWKS_FALLBACK={
   "issuer": "https://throbbing-silence-15e3.cloudflareaccess.com",
-  "fetchedAt": "2026-11-04T16:33:52.229Z",
-  "expiresAt": "2026-11-11T16:33:52.229Z",
+  "fetchedAt": "2026-11-07T11:02:36.241Z",
+  "expiresAt": "2026-11-14T11:02:36.241Z",
   "keys": [
     {
       "kid": "013468304bc5ebbfd75571d93272a488c1b8786b60797e50d9647884886fcb78",
